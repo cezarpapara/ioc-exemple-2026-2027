@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Automat de bilete</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --ac: #0b4f9c; --fond: #eef3f8; --activ: #eaf2fc; }
+    [data-bs-theme="dark"] { --ac: #7fb2f0; --fond: #0f1620; --activ: #16263a; }
+    body { background: var(--fond); padding-bottom: 90px; }
+    [data-bs-theme="dark"] .btn-outline-primary { --bs-btn-color: #8bb9fe; --bs-btn-border-color: #8bb9fe; --bs-btn-active-bg: #8bb9fe; --bs-btn-active-color: #0f1620; } [data-bs-theme="dark"] .btn-outline-secondary { --bs-btn-color: #c5ccd3; --bs-btn-border-color: #8a939b; }
+    .antet { background: #0b3f7c; color: #fff; } .rapid { border-left: 4px solid var(--ac); }
+    .tip { display: block; min-height: 88px; padding: .9rem 1rem; cursor: pointer; border: 2px solid var(--bs-border-color); border-radius: .75rem; background: var(--bs-body-bg); }
+    .tip:hover { border-color: var(--ac); } .tip .pret { font-weight: 700; color: var(--ac); }
+    .btn-check:checked + .tip { border-color: var(--ac); background: var(--activ); box-shadow: 0 0 0 .25rem rgba(11, 79, 156, .2); }
+    .btn-check:focus-visible + .tip, .btn-check:focus-visible + .btn, .btn:focus-visible { outline: 3px solid #e3a008; outline-offset: 2px; }
+    .stepper .btn { width: 3.5rem; height: 3.5rem; font-size: 1.5rem; } .cant { width: 4rem; font-size: 1.6rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <header class="antet py-3 mb-4"><div class="container d-flex align-items-center gap-3">
+    <div class="me-auto"><h1 class="h4 mb-0">Bilete autobuz</h1><small class="opacity-75">Transport public local · card sau numerar</small></div>
+    <button id="tema" class="btn btn-sm btn-outline-light text-nowrap" aria-pressed="false" title="Comută între modul luminos și cel întunecat">Mod întunecat</button></div></header>
+  <main class="container">
+    <div class="card rapid border-0 shadow-sm mb-4"><div class="card-body d-flex flex-wrap align-items-center gap-3">
+      <div class="me-auto"><div class="fw-semibold">Cel mai cumpărat: o călătorie, preț întreg – 3,00 lei</div>
+        <div class="small text-body-secondary">Două atingeri: „Cumpără acum”, apoi metoda de plată.</div></div>
+      <button id="repeta" class="btn btn-outline-primary d-none">Repetă ultima comandă</button>
+      <button id="rapid" class="btn btn-primary btn-lg" title="Bilet valabil 60 de minute de la validare">Cumpără acum</button></div></div>
+    <div class="row g-4">
+      <section class="col-lg-8">
+        <fieldset class="mb-4"><legend class="h5">1. Tipul biletului</legend><div id="tipuri" class="row row-cols-1 row-cols-sm-2 g-3"></div></fieldset>
+        <fieldset class="mb-4"><legend class="h5">2. Categoria de călător</legend><div id="categorii" class="btn-group w-100 mb-1"></div>
+          <p id="infoCateg" class="small text-body-secondary mb-0"></p></fieldset>
+        <h2 class="h5" id="tNr">3. Câte bilete?</h2>
+        <div class="d-flex flex-wrap align-items-center gap-3 stepper" role="group" aria-labelledby="tNr">
+          <button id="minus" class="btn btn-outline-primary" aria-label="Mai puține bilete">−</button>
+          <output id="nr" class="cant fw-bold" aria-live="polite">1</output>
+          <button id="plus" class="btn btn-outline-primary" aria-label="Mai multe bilete">+</button>
+          <span id="infoNr" class="small text-body-secondary"></span></div></section>
+      <aside class="col-lg-4">
+        <div class="card border-0 shadow-sm"><div class="card-body p-4">
+          <h2 class="h5">Comanda dvs.</h2>
+          <table class="table table-sm mb-3"><tbody id="rezumat"></tbody></table>
+          <div class="d-flex justify-content-between align-items-baseline mb-3" aria-live="polite"><span>Total de plată</span><span id="total" class="fs-3 fw-bold"></span></div>
+          <button id="plateste" class="btn btn-primary btn-lg w-100 py-3"></button>
+          <button id="reset" class="btn btn-link btn-sm w-100 mt-2 text-body-secondary">Reîncepe comanda</button></div></div></aside>
+    </div>
+  </main>
+  <div class="modal fade" id="plata" tabindex="-1" aria-labelledby="tPlata" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title h5" id="tPlata">Confirmați și plătiți</h2><button class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button></div>
+    <div class="modal-body" id="corpPlata" aria-live="polite"></div></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Tarife si categorii (reducerile sunt procente din pretul intreg)
+    const TIPURI = [
+      { nume: 'O călătorie', pret: 3, info: 'Valabil 60 de minute de la validare, cu schimbare de linie.' },
+      { nume: 'Două călătorii', pret: 5.5, info: 'Două validări separate; fiecare este valabilă 60 de minute.' },
+      { nume: 'Abonament 1 zi', pret: 10, info: 'Călătorii nelimitate până la ora 24:00 a zilei validării.' },
+      { nume: 'Abonament 7 zile', pret: 40, info: 'Călătorii nelimitate 7 zile consecutive de la prima validare.' },
+    ];
+    const CATEG = [
+      { nume: 'Normal', red: 0, info: 'Prețul întreg, fără reducere.' },
+      { nume: 'Elev / student', red: 50, info: 'Reducere 50%. Păstrați carnetul de elev sau de student pentru control.' },
+      { nume: 'Pensionar', red: 50, info: 'Reducere 50%. Păstrați cuponul de pensie sau legitimația pentru control.' },
+    ];
+    const $ = id => document.getElementById(id);
+    const citeste = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+    const scrie = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    const lei = v => v.toLocaleString('ro-RO', { minimumFractionDigits: 2 }) + ' lei';
+    const modal = new bootstrap.Modal($('plata'));
+    let c = { tip: 0, categ: 0, nr: 1 };
+    const total = () => TIPURI[c.tip].pret * c.nr * (100 - CATEG[c.categ].red) / 100;
+    function seteazaTema(t) { document.documentElement.dataset.bsTheme = t; scrie('tema', t); $('tema').setAttribute('aria-pressed', t === 'dark');
+      $('tema').textContent = t === 'dark' ? 'Mod luminos' : 'Mod întunecat'; }
+    seteazaTema(citeste('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    $('tema').onclick = () => seteazaTema(document.documentElement.dataset.bsTheme === 'dark' ? 'light' : 'dark');
+    // Optiuni radio: tinte mari, selectie vizibila, navigare cu sagetile
+    TIPURI.forEach((t, i) => $('tipuri').insertAdjacentHTML('beforeend', `<div class="col"><input type="radio" class="btn-check" name="tip" id="t${i}" value="${i}">
+      <label class="tip" for="t${i}"><span class="d-block fw-semibold">${t.nume}</span><span class="pret">${lei(t.pret)}</span>
+      <span class="d-block small text-body-secondary">${t.info}</span></label></div>`));
+    CATEG.forEach((k, i) => $('categorii').insertAdjacentHTML('beforeend', `<input type="radio" class="btn-check" name="categ" id="c${i}" value="${i}">
+      <label class="btn btn-outline-primary py-3" for="c${i}">${k.nume}${k.red ? ' −' + k.red + '%' : ''}</label>`));
+    document.querySelectorAll('[title]').forEach(el => new bootstrap.Tooltip(el));
+    function actualizeaza() {
+      $('t' + c.tip).checked = true; $('c' + c.categ).checked = true;
+      $('infoCateg').textContent = CATEG[c.categ].info; $('nr').textContent = c.nr;
+      $('minus').disabled = c.nr <= 1; $('plus').disabled = c.nr >= 10;
+      $('infoNr').textContent = c.nr >= 10 ? 'Maximum 10 bilete într-o tranzacție.' : 'Între 1 și 10 bilete. Tastele + și − funcționează și ele.';
+      $('rezumat').innerHTML = `<tr><td>Bilet</td><td class="text-end">${TIPURI[c.tip].nume}</td></tr>
+        <tr><td>Preț unitar</td><td class="text-end">${lei(TIPURI[c.tip].pret)}</td></tr><tr><td>Cantitate</td><td class="text-end">${c.nr}</td></tr>
+        <tr><td>Reducere</td><td class="text-end">${CATEG[c.categ].red ? '−' + CATEG[c.categ].red + '% (' + CATEG[c.categ].nume.toLowerCase() + ')' : '—'}</td></tr>`;
+      $('total').textContent = lei(total()); $('plateste').textContent = 'Plătește ' + lei(total());
+      const ult = citeste('ultima'); $('repeta').classList.toggle('d-none', !ult); if (ult) $('repeta').textContent = `Repetă: ${ult.nr} × ${TIPURI[ult.tip].nume}`;
+    }
+    // Plata: rezumat + metoda; numerarul are sume rapide, ca sa nu tastati
+    function deschidePlata() {
+      $('corpPlata').innerHTML = `<p class="mb-1"><strong>${c.nr} × ${TIPURI[c.tip].nume}</strong>, ${CATEG[c.categ].nume.toLowerCase()}</p>
+        <p class="fs-4 fw-bold mb-3">${lei(total())}</p>
+        <div class="d-grid gap-2"><button class="btn btn-primary btn-lg py-3" id="mCard">Plătesc cu cardul</button>
+        <button class="btn btn-outline-primary btn-lg" id="mNumerar">Plătesc numerar</button>
+        <button class="btn btn-link text-body-secondary" data-bs-dismiss="modal">Anulează și modifică comanda</button></div>`;
+      $('mCard').onclick = () => proceseaza('Apropiați cardul de cititor…', 0);
+      $('mNumerar').onclick = () => {
+        const sume = [...new Set([total(), 10, 20, 50].filter(s => s >= total()))].slice(0, 3);
+        $('corpPlata').innerHTML = `<form id="fNum" novalidate><p class="mb-2">Total: <strong>${lei(total())}</strong>. Cât ați introdus?</p>
+          <div class="d-flex flex-wrap gap-2 mb-3">${sume.map(s => `<button type="button" class="btn btn-outline-primary btn-lg suma" data-s="${s}">${lei(s)}</button>`).join('')}</div>
+          <label for="suma" class="form-label">Altă sumă (lei)</label>
+          <input id="suma" class="form-control form-control-lg" inputmode="decimal" aria-describedby="eroare" autocomplete="off">
+          <div class="invalid-feedback" id="eroare"></div>
+          <button class="btn btn-primary btn-lg w-100 mt-3">Confirmă plata</button></form>`;
+        document.querySelectorAll('.suma').forEach(b => b.onclick = () => plataNumerar(+b.dataset.s));
+        $('fNum').onsubmit = e => { e.preventDefault(); plataNumerar(parseFloat($('suma').value.replace(',', '.'))); };
+      };
+      modal.show();
+    }
+    function plataNumerar(s) {
+      const er = t => { $('suma').classList.add('is-invalid'); $('suma').setAttribute('aria-invalid', 'true'); $('eroare').textContent = t; $('suma').focus(); };
+      if (isNaN(s) || s <= 0) return er('Introduceți suma în lei, de exemplu 10 sau 7,50.');
+      if (s < total()) return er(`Suma este mai mică decât totalul. Mai introduceți ${lei(total() - s)}.`);
+      proceseaza('Se verifică bancnotele…', s - total());
+    }
+    function proceseaza(text, rest) {
+      $('corpPlata').innerHTML = `<div class="text-center py-4"><div class="spinner-border text-primary mb-3" aria-hidden="true"></div><p class="mb-0">${text}</p></div>`;
+      setTimeout(() => {
+        const cod = Math.random().toString(36).slice(2, 8).toUpperCase();
+        $('corpPlata').innerHTML = `<div class="alert alert-success">Plata a fost acceptată. Ridicați biletul din fanta de jos.${rest > 0 ? ' Rest: ' + lei(rest) + '.' : ''}</div>
+          <div class="border rounded p-3 bg-body-tertiary"><div class="fw-bold">${c.nr} × ${TIPURI[c.tip].nume}</div>
+          <div class="small">${CATEG[c.categ].nume} · ${lei(total())} · cod ${cod}</div><div class="small text-body-secondary">${TIPURI[c.tip].info}</div></div>
+          <button class="btn btn-primary w-100 mt-3" data-bs-dismiss="modal" id="gata">Gata</button>`;
+        $('gata').focus(); scrie('ultima', c); c = { tip: 0, categ: 0, nr: 1 }; actualizeaza();
+      }, 1500);
+    }
+    // Evenimente: alegeri, cantitate (si de la tastatura), plata
+    $('tipuri').onchange = e => { c.tip = +e.target.value; actualizeaza(); };
+    $('categorii').onchange = e => { c.categ = +e.target.value; actualizeaza(); };
+    const schimbaNr = d => { c.nr = Math.min(10, Math.max(1, c.nr + d)); actualizeaza(); };
+    $('minus').onclick = () => schimbaNr(-1); $('plus').onclick = () => schimbaNr(1);
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' && e.target.type !== 'radio' || $('plata').classList.contains('show')) return;
+      if (e.key === '+') schimbaNr(1); if (e.key === '-') schimbaNr(-1);
+    });
+    $('rapid').onclick = () => { c = { tip: 0, categ: 0, nr: 1 }; actualizeaza(); deschidePlata(); };
+    $('repeta').onclick = () => { c = citeste('ultima'); actualizeaza(); deschidePlata(); };
+    $('reset').onclick = () => { c = { tip: 0, categ: 0, nr: 1 }; actualizeaza(); }; $('plateste').onclick = deschidePlata;
+    actualizeaza();
+  </script>
+  <script src="../../assets/nivel.js" data-nivel="4"></script>
+</body>
+</html>

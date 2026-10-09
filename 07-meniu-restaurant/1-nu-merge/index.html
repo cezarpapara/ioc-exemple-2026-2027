@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Meniu restaurant</title>
+<style>
+  body { background: #7a1f1f; font-family: Georgia, serif; color: #3d0d0d; margin: 0; }
+  .pagina { width: 1000px; margin: 0 auto; background: #8c2a2a; padding: 10px 20px; }
+  h1 { font-family: "Brush Script MT", cursive; color: #b04848; font-size: 42px; margin: 0; }
+  .oferta { background: #ffeb3b; color: #d50000; font-weight: bold; text-align: center; padding: 6px; font-size: 18px; }
+  table { width: 100%; }
+  td { padding: 6px; vertical-align: top; font-size: 13px; }
+  .nume { color: #e0a0a0; font-size: 15px; }
+  .desc { color: #6e2222; font-size: 11px; font-style: italic; }
+  a.add { color: #5a1414; font-size: 10px; }
+  .cos { position: absolute; top: 14px; right: 30px; color: #a65050; font-size: 11px; }
+  .mic { font-size: 10px; color: #6e2222; }
+  input { width: 110px; font-size: 11px; background: #8c2a2a; border: 1px solid #6e2222; color: #e0a0a0; }
+  .trimite { background: #6e2222; color: #8c2a2a; border: 0; padding: 4px 8px; }
+  #popup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); }
+  #popup div { width: 420px; margin: 120px auto; background: #fff; padding: 30px; text-align: center; color: #333; }
+  #popup .da { background: #2e7d32; color: #fff; font-size: 22px; padding: 14px 30px; border: 0; }
+  #popup .nu { display: block; margin-top: 18px; color: #bbb; font-size: 10px; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="cos" id="cos">Coș: 0</div>
+  <h1>Bistro Campus</h1>
+  <div class="oferta">SUPER OFERTĂ! Expiră în <span id="timer">04:59</span> !!!</div>
+  <table>
+    <tr>
+      <td><span class="nume">Ciorbă de burtă</span><br><span class="desc">cu smântână și ardei iute</span><br>24 <a href="#" class="add" data-p="24">[+]</a></td>
+      <td><span class="nume">Supă cremă de linte</span><br><span class="desc">cu crutoane</span><br>19.00 RON <a href="#" class="add" data-p="19">[+]</a></td>
+      <td><span class="nume">Sarmale cu mămăliguță</span><br><span class="desc">4 buc.</span><br>38 lei <a href="#" class="add" data-p="38">[+]</a></td>
+    </tr>
+    <tr>
+      <td><span class="nume">Piept de pui la grătar</span><br><span class="desc">cu legume coapte</span><br>36,- <a href="#" class="add" data-p="36">[+]</a></td>
+      <td><span class="nume">Papanași</span><br><span class="desc">cu dulceață de afine</span><br>RON 26 <a href="#" class="add" data-p="26">[+]</a></td>
+      <td><span class="nume">Limonadă cu mentă</span><br><span class="desc">400 ml</span><br>14 <a href="#" class="add" data-p="14">[+]</a></td>
+    </tr>
+  </table>
+  <p class="mic">
+    <label><input type="checkbox" id="tacamuri" checked style="width:auto"> Tacâmuri și șervețele premium (+4,50)</label>
+    <label><input type="checkbox" id="desert" checked style="width:auto"> Adaugă desertul zilei (+12)</label>
+  </p>
+  <input id="nume" placeholder="Nume"> <input id="tel" placeholder="Tel"> <input id="adresa" placeholder="Adr.">
+  <button class="trimite" id="trimite">Trimite</button>
+  <p class="mic" id="rezultat"></p>
+</div>
+<div id="popup"><div>
+  <h2>STAI! Nu pleca!</h2>
+  <p>Abonează-te la newsletter și primești 10% reducere la următoarea comandă!</p>
+  <button class="da" id="da">DA, VREAU REDUCERE!</button>
+  <a href="#" class="nu" id="nu">Nu, mulțumesc, nu vreau reduceri</a>
+</div></div>
+
+<script>
+  let total = 0, produse = 0;
+
+  // Fiecare [+] adauga produsul; nu se poate scoate nimic din cos
+  document.querySelectorAll('.add').forEach(function (a) {
+    a.onclick = function (e) {
+      e.preventDefault();
+      total += Number(a.dataset.p);
+      produse++;
+      document.getElementById('cos').textContent = 'Coș: ' + produse;
+    };
+  });
+
+  // Telefon invalid sau cos gol: nu se intampla nimic
+  document.getElementById('trimite').onclick = function () {
+    if (produse === 0 || !/^\d{10}$/.test(document.getElementById('tel').value)) return;
+    document.getElementById('popup').style.display = 'block';
+  };
+
+  // Abonarea se face oricum, indiferent de buton
+  function finalizeaza() {
+    document.getElementById('popup').style.display = 'none';
+    let deplata = total + 9.99;
+    if (document.getElementById('tacamuri').checked) deplata += 4.5;
+    if (document.getElementById('desert').checked) deplata += 12;
+    document.getElementById('rezultat').textContent = 'Comanda #' + Math.floor(Math.random() * 9000 + 1000) +
+      ' a fost înregistrată. Total de plată: ' + deplata.toFixed(2) + ' (include taxa de serviciu). Ați fost abonat la newsletter.';
+  }
+  document.getElementById('da').onclick = finalizeaza;
+  document.getElementById('nu').onclick = function (e) { e.preventDefault(); finalizeaza(); };
+
+  // Oferta "limitata", care reincepe la fiecare incarcare a paginii
+  let secunde = 299;
+  setInterval(function () {
+    secunde = secunde > 0 ? secunde - 1 : 299;
+    document.getElementById('timer').textContent = '0' + Math.floor(secunde / 60) + ':' + String(secunde % 60).padStart(2, '0');
+  }, 1000);
+</script>
+<script src="../../assets/nivel.js" data-nivel="1"></script>
+</body>
+</html>

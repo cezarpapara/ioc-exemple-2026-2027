@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panou seră</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .valoare { font-size: 2.6rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .card.alarma { border: 4px solid var(--bs-danger); } .card.atentie { border: 4px dashed var(--bs-warning); }
+    .grafic { position: relative; height: 260px; }
+    :focus-visible { outline: 3px solid #f0b429 !important; outline-offset: 2px; }
+    [data-bs-theme=dark] .btn-outline-secondary { --bs-btn-color: #ced4da; --bs-btn-border-color: #adb5bd; }
+    [data-bs-theme=dark] .btn-outline-danger { --bs-btn-color: #f1aeb5; --bs-btn-border-color: #ea868f; }
+  </style>
+</head>
+<body class="bg-body-tertiary">
+<header class="bg-dark text-white py-3 mb-3"><div class="container d-flex flex-wrap align-items-center gap-2">
+  <h1 class="h4 mb-0 me-auto">Sera 2 – roșii</h1>
+  <span class="small">Date simulate · actualizare la 2 s · <span id="ceas"></span></span>
+  <span class="badge text-bg-light" id="neconfirmate"></span>
+  <button class="btn btn-sm btn-outline-light" id="tema" aria-pressed="false">Mod întunecat</button></div></header>
+<main class="container pb-5">
+  <div id="banner" class="alert mb-3 fw-semibold" role="status"></div>
+  <div class="visually-hidden" aria-live="assertive" id="anunt"></div>
+  <div class="row g-3 mb-3" id="carduri"></div>
+  <div class="row g-3">
+    <section class="col-lg-4" aria-labelledby="tCom"><div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6" id="tCom">Comenzi</h2>
+      <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" role="switch" id="vent">
+        <label class="form-check-label" for="vent">Ventilație: <b id="ventText">oprită</b></label></div>
+      <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" role="switch" id="inc">
+        <label class="form-check-label" for="inc">Încălzire: <b id="incText">oprită</b></label></div>
+      <button class="btn btn-primary w-100" id="irigare" data-bs-toggle="tooltip" data-bs-title="Pornește pompa de irigare timp de un minut; o puteți opri oricând">Pornește irigarea (1 minut)</button>
+      <div class="progress mt-2" role="progressbar" aria-label="Timp rămas din irigare" style="height: 6px"><div class="progress-bar" id="bara" style="width: 0"></div></div>
+      <p class="small text-body-secondary mt-2 mb-0" id="irigareText" aria-live="polite">Irigarea este oprită.</p>
+    </div></div></section>
+    <section class="col-lg-8" aria-labelledby="tGraf"><div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6" id="tGraf">Evoluție în ultimele 2 minute <small class="text-body-secondary fw-normal">(liniile întrerupte: limitele de temperatură)</small></h2>
+      <div class="grafic" id="zonaGrafic"><canvas id="grafic" role="img" aria-label="Graficul temperaturii aerului și al umidității solului în ultimele două minute"></canvas></div>
+    </div></div></section>
+  </div>
+  <section class="card shadow-sm mt-3" aria-labelledby="tJur"><div class="card-body">
+    <div class="d-flex align-items-center mb-2"><h2 class="h6 me-auto mb-0" id="tJur">Jurnal de alarme</h2>
+      <button class="btn btn-sm btn-outline-secondary" id="toate">Confirmă toate</button></div>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+      <thead><tr><th scope="col">Ora</th><th class="d-none d-sm-table-cell" scope="col">Parametru</th><th scope="col">Mesaj</th><th scope="col"><span class="visually-hidden">Acțiune</span></th></tr></thead>
+      <tbody id="jurnal"></tbody></table></div>
+  </div></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  // [min, max] = intervalul normal; [amin, amax] = pragurile de alarma; HIST = marja de revenire (histerezis)
+  const S = {
+    temp: { nume: 'Temperatura aerului', unit: '°C', val: 24.5, min: 18, max: 26, amin: 12, amax: 30, info: 'Senzor în centrul serei, la 1,5 m înălțime' },
+    umid: { nume: 'Umiditatea aerului', unit: '%', val: 70, min: 60, max: 80, amin: 50, amax: 90, info: 'Umiditate relativă a aerului' },
+    sol: { nume: 'Umiditatea solului', unit: '%', val: 42, min: 35, max: 60, amin: 25, amax: 75, info: 'Media celor 4 senzori din straturi' },
+  };
+  const HIST = 0.5, RANG = { normal: 0, atentie: 1, alarma: 2 };
+  const ETICHETE = { normal: ['Normal', 'success', '●'], atentie: ['Atenție', 'warning', '▲'], alarma: ['Alarmă', 'danger', '■'] };
+  const cmd = { vent: false, inc: false };
+  let irigare = 0, jurnal = [], grafic = null;
+  const $ = id => document.getElementById(id), nr = x => x.toFixed(1).replace('.', ',');
+  const ora = (d = new Date()) => d.toLocaleTimeString('ro-RO');
+  const citeste = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  // Starea curenta; o stare anormala dispare abia cand valoarea revine cu HIST in interval (fara alarme "care palpaie")
+  function stare(s) {
+    const hA = s.stare === 'alarma' ? HIST : 0, hW = RANG[s.stare] > 0 ? HIST : 0;
+    if (s.val > s.amax - hA || s.val < s.amin + hA) return 'alarma';
+    return s.val > s.max - hW || s.val < s.min + hW ? 'atentie' : 'normal';
+  }
+  $('carduri').innerHTML = Object.keys(S).map(k => `<section class="col-md-4" aria-labelledby="n-${k}"><div class="card shadow-sm h-100" id="c-${k}"><div class="card-body">
+    <div class="d-flex justify-content-between"><h2 class="h6 text-body-secondary mb-1" id="n-${k}" data-bs-toggle="tooltip" data-bs-title="${S[k].info}" tabindex="0">${S[k].nume}</h2><span id="b-${k}"></span></div>
+    <div class="valoare"><span id="v-${k}"></span> <small class="fs-5 text-body-secondary">${S[k].unit}</small> <span class="fs-6 fw-normal text-body-secondary" id="t-${k}"></span></div>
+    <div class="small text-body-secondary">Interval normal: ${S[k].min}–${S[k].max} ${S[k].unit} · alarmă sub ${S[k].amin} sau peste ${S[k].amax}</div></div></div></section>`).join('');
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+  // Graficul (daca Chart.js nu s-a putut incarca, panoul functioneaza in continuare fara el)
+  const limita = (v, cul) => ({ label: `Limită ${v} °C`, data: [], borderColor: cul, borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, yAxisID: 'y', fixa: v });
+  if (window.Chart) grafic = new Chart($('grafic'), { type: 'line', data: { labels: [], datasets: [
+      { label: 'Temperatura aerului (°C)', data: [], borderColor: '#d9480f', backgroundColor: '#d9480f', yAxisID: 'y', pointRadius: 0, tension: 0.3 },
+      { label: 'Umiditatea solului (%)', data: [], borderColor: '#1c7ed6', backgroundColor: '#1c7ed6', yAxisID: 'y1', pointRadius: 0, tension: 0.3 },
+      limita(26, '#b7791f'), limita(30, '#c92a2a')] },
+    options: { animation: false, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { filter: it => !it.text.startsWith('Limită') } } },
+      scales: { y: { title: { display: true, text: 'Temperatură (°C)' }, suggestedMin: 15, suggestedMax: 32 },
+        y1: { position: 'right', title: { display: true, text: 'Umiditatea solului (%)' }, suggestedMin: 20, suggestedMax: 70, grid: { drawOnChartArea: false } } } } });
+  else $('zonaGrafic').outerHTML = '<p class="alert alert-secondary small">Graficul nu poate fi afișat (biblioteca Chart.js nu s-a încărcat; verificați conexiunea la internet). Valorile, comenzile și alarmele funcționează normal.</p>';
+
+  function aplicaTema(t) {
+    document.documentElement.dataset.bsTheme = t; $('tema').textContent = t === 'dark' ? 'Mod luminos' : 'Mod întunecat'; $('tema').setAttribute('aria-pressed', t === 'dark');
+    if (window.Chart) { Chart.defaults.color = t === 'dark' ? '#ced4da' : '#495057'; Chart.defaults.borderColor = t === 'dark' ? 'rgba(255,255,255,.12)' : 'rgba(0,0,0,.1)'; grafic?.update(); }
+  }
+  aplicaTema(citeste('tema', matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('tema').onclick = () => { const t = document.documentElement.dataset.bsTheme === 'dark' ? 'light' : 'dark'; aplicaTema(t); try { localStorage.setItem('tema', JSON.stringify(t)); } catch { /* ignorat */ } };
+
+  // Simularea procesului: soarele incalzeste sera, ventilatia o raceste, solul se usuca
+  function simuleaza() {
+    Object.values(S).forEach(s => s.prec = s.val);
+    S.temp.val += (cmd.vent ? -0.35 : 0.25) + (cmd.inc ? 0.3 : 0) + (Math.random() - 0.5) * 0.2;
+    S.umid.val += (cmd.vent ? -0.4 : 0.15) + (Math.random() - 0.5) * 0.5;
+    S.sol.val += irigare > 0 ? 1.2 : -0.25;
+    if (irigare > 0) irigare--;
+  }
+  // Actiunea recomandata pentru prima alarma activa
+  const sfat = () => S.temp.stare === 'alarma' ? (S.temp.val > S.temp.max ? 'Porniți ventilația.' : 'Porniți încălzirea și opriți ventilația.')
+    : S.sol.stare === 'alarma' ? (S.sol.val < S.sol.min ? 'Porniți irigarea.' : 'Opriți irigarea.') : 'Verificați ventilația.';
+  function actualizeaza(d = new Date()) {
+    Object.entries(S).forEach(([k, s]) => {
+      const st = stare(s), [txt, cul, simbol] = ETICHETE[st], dif = s.val - (s.prec ?? s.val);
+      $('v-' + k).textContent = nr(s.val);
+      $('t-' + k).textContent = dif > 0.05 ? '↑ crește' : dif < -0.05 ? '↓ scade' : '→ stabil';
+      $('b-' + k).innerHTML = `<span class="badge text-bg-${cul} fs-6">${simbol} ${txt}</span>`;
+      $('c-' + k).className = 'card shadow-sm h-100 ' + (st === 'normal' ? '' : st);
+      if (s.stare && RANG[st] > RANG[s.stare]) {
+        const a = { ora: ora(d), k, st, text: `${txt}: ${nr(s.val)} ${s.unit} (${s.val > s.max ? 'peste' : 'sub'} ${st === 'alarma' ? (s.val > s.max ? s.amax : s.amin) : (s.val > s.max ? s.max : s.min)} ${s.unit})` };
+        jurnal.unshift(a); $('anunt').textContent = `${txt} – ${s.nume}: ${nr(s.val)} ${s.unit}, la ora ${a.ora}.`;
+      }
+      s.stare = st;
+    });
+    const alarme = Object.values(S).filter(s => s.stare === 'alarma'), atentie = Object.values(S).filter(s => s.stare === 'atentie');
+    $('banner').className = 'alert mb-3 fw-semibold alert-' + (alarme.length ? 'danger' : atentie.length ? 'warning' : 'success');
+    $('banner').textContent = alarme.length ? `■ ${alarme.length === 1 ? 'O alarmă activă' : alarme.length + ' alarme active'}: ${alarme.map(s => s.nume).join(', ')}. ${sfat()}`
+      : atentie.length ? `▲ Atenție: ${atentie.map(s => s.nume.toLowerCase()).join(', ')} în afara intervalului normal.` : '● Toate valorile sunt în limite normale.';
+    const neconf = jurnal.filter(a => !a.ok).length;
+    $('neconfirmate').textContent = neconf ? `${neconf} ${neconf === 1 ? 'alarmă neconfirmată' : 'alarme neconfirmate'}` : 'Nicio alarmă neconfirmată';
+    $('toate').disabled = !neconf;
+    $('jurnal').innerHTML = jurnal.length ? jurnal.slice(0, 8).map((a, i) => `<tr class="${a.ok ? 'text-body-secondary' : 'fw-semibold'}"><td>${a.ora}</td><td class="d-none d-sm-table-cell">${S[a.k].nume}</td>
+      <td><span class="badge text-bg-${ETICHETE[a.st][1]}">${ETICHETE[a.st][2]}</span> <span class="d-sm-none">${S[a.k].nume}. </span>${a.text}</td>
+      <td class="text-end">${a.ok ? '✓ Confirmată' : `<button class="btn btn-sm btn-outline-secondary" data-i="${i}" aria-label="Confirmă alarma de la ${a.ora}">Confirmă</button>`}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="text-body-secondary">Nicio alarmă înregistrată.</td></tr>';
+    $('irigareText').textContent = irigare > 0 ? `Irigare în curs: mai sunt ${irigare * 2} secunde.` : 'Irigarea este oprită.';
+    $('irigare').textContent = irigare > 0 ? 'Oprește irigarea' : 'Pornește irigarea (1 minut)';
+    $('irigare').className = 'btn w-100 ' + (irigare > 0 ? 'btn-outline-danger' : 'btn-primary');
+    $('bara').style.width = (irigare / 30 * 100) + '%';
+    $('ceas').textContent = ora(d);
+  }
+  function adaugaPunct(d = new Date()) {
+    if (!grafic) return;
+    grafic.data.labels.push(ora(d)); grafic.data.datasets[0].data.push(S.temp.val); grafic.data.datasets[1].data.push(S.sol.val);
+    grafic.data.datasets.slice(2).forEach(ds => ds.data.push(ds.fixa));
+    if (grafic.data.labels.length > 60) { grafic.data.labels.shift(); grafic.data.datasets.forEach(ds => ds.data.shift()); }
+    grafic.update();
+  }
+  ['vent', 'inc'].forEach(k => $(k).addEventListener('change', e => { cmd[k] = e.target.checked; $(k + 'Text').textContent = cmd[k] ? 'pornită' : 'oprită'; }));
+  // Prevenirea erorilor: irigarea nu porneste daca solul este deja suficient de umed
+  $('irigare').addEventListener('click', () => {
+    if (irigare > 0) irigare = 0;
+    else if (S.sol.val >= S.sol.max) return $('irigareText').textContent = `Solul este deja umed (${nr(S.sol.val)} %). Irigarea nu este necesară acum.`;
+    else if (confirm(`Umiditatea solului este ${nr(S.sol.val)} %. Porniți irigarea pentru un minut?`)) irigare = 30;
+    actualizeaza();
+  });
+  $('jurnal').addEventListener('click', e => { if (e.target.dataset.i) { jurnal[e.target.dataset.i].ok = true; actualizeaza(); $('toate').focus(); } });
+  $('toate').addEventListener('click', () => { jurnal.forEach(a => a.ok = true); actualizeaza(); });
+
+  for (let i = 20; i > 0; i--) { const d = new Date(Date.now() - i * 2000); simuleaza(); actualizeaza(d); adaugaPunct(d); }
+  setInterval(() => { simuleaza(); actualizeaza(); adaugaPunct(); }, 2000);
+</script>
+<script src="../../assets/nivel.js" data-nivel="4"></script>
+</body>
+</html>

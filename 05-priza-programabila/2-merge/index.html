@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Priză programabilă</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 14px; color: #333; margin: 0; background: #eceff1; }
+  .pagina { width: 880px; margin: 20px auto; background: #fff; padding: 20px 30px; }
+  h1 { font-size: 22px; margin: 0 0 16px; color: #455a64; }
+  .stare { font-size: 16px; margin-bottom: 20px; }
+  .stare b { font-family: monospace; }
+  .btn-albastru { background: #1976d2; color: #fff; border: 0; padding: 6px 14px; }
+  .btn-verde { background: #43a047; color: #fff; border: 0; padding: 8px 20px; border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+  th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+  th { background: #f5f5f5; }
+  a.sterge { color: #e53935; font-size: 12px; }
+  fieldset { border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <h1>Priză inteligentă – Birou</h1>
+  <div class="stare">Status: <b id="stare">OFF</b> &nbsp; <button class="btn-albastru" id="comuta">Comută</button></div>
+
+  <fieldset>
+    <legend>Program</legend>
+    Pornire: <input type="time" id="ora1">
+    Oprire: <input type="time" id="ora2">
+    &nbsp; Zile:
+    <label><input type="checkbox" value="1">L</label>
+    <label><input type="checkbox" value="2">M</label>
+    <label><input type="checkbox" value="3">M</label>
+    <label><input type="checkbox" value="4">J</label>
+    <label><input type="checkbox" value="5">V</label>
+    <label><input type="checkbox" value="6">S</label>
+    <label><input type="checkbox" value="7">D</label>
+    &nbsp; <button class="btn-verde" id="adauga">Adaugă</button>
+  </fieldset>
+
+  <table>
+    <thead><tr><th>ID</th><th>ON</th><th>OFF</th><th>Days</th><th></th></tr></thead>
+    <tbody id="tabel"></tbody>
+  </table>
+</div>
+
+<script>
+  let pornita = false;
+  let programe = [];
+  let urmatorulId = 1;
+
+  function afiseazaStare() {
+    document.getElementById('stare').textContent = pornita ? 'ON' : 'OFF';
+  }
+
+  function afiseazaTabel() {
+    document.getElementById('tabel').innerHTML = programe.map(p =>
+      '<tr><td>' + p.id + '</td><td>' + p.ora1 + '</td><td>' + p.ora2 + '</td><td>' + p.zile.join(',') +
+      '</td><td><a href="#" class="sterge" data-id="' + p.id + '">Șterge</a></td></tr>').join('');
+  }
+
+  document.getElementById('comuta').onclick = function () {
+    pornita = !pornita;
+    afiseazaStare();
+  };
+
+  // Validare cu mesaje tehnice, afisate cu alert()
+  document.getElementById('adauga').onclick = function () {
+    const ora1 = document.getElementById('ora1').value;
+    const ora2 = document.getElementById('ora2').value;
+    const zile = [...document.querySelectorAll('fieldset input[type=checkbox]:checked')].map(c => Number(c.value));
+    if (!ora1 || !ora2 || ora2 <= ora1) { alert('Invalid input'); return; }
+    if (zile.length === 0) { alert('Error 42: days = 0'); return; }
+    programe.push({ id: urmatorulId++, ora1: ora1, ora2: ora2, zile: zile });
+    afiseazaTabel();
+  };
+
+  // Stergere directa, fara confirmare
+  document.getElementById('tabel').onclick = function (e) {
+    if (!e.target.classList.contains('sterge')) return;
+    e.preventDefault();
+    programe = programe.filter(p => p.id !== Number(e.target.dataset.id));
+    afiseazaTabel();
+  };
+
+  // La fiecare 30 s programul suprascrie, fara niciun anunt, starea aleasa manual
+  setInterval(function () {
+    if (programe.length === 0) return;
+    const d = new Date();
+    const zi = d.getDay() === 0 ? 7 : d.getDay();
+    const acum = d.toTimeString().slice(0, 5);
+    pornita = programe.some(p => p.zile.includes(zi) && acum >= p.ora1 && acum < p.ora2);
+    afiseazaStare();
+  }, 30000);
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>

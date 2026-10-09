@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Schimb valutar</title>
+<style>
+  body { font-family: "Courier New", monospace; background: #1d6b3a; color: #e04545; font-size: 12px; }
+  .cadru { width: 640px; margin: 16px auto; }
+  table { border-collapse: collapse; width: 100%; background: #2e8b57; }
+  td, th { border: 1px solid #237a48; padding: 2px 6px; color: #ff5a5a; }
+  .op { margin-top: 12px; background: #237a48; padding: 8px; color: #b3d9c0; }
+  .op input, .op select { font-size: 11px; width: 70px; }
+  .mic { font-size: 9px; padding: 0 3px; }
+  #rez { font-size: 13px; margin-top: 8px; color: #ffd27f; }
+</style>
+</head>
+<body>
+<div class="cadru">
+  <table>
+    <tr><th>MON</th><th>C</th><th>V</th></tr>
+    <tr><td>EUR</td><td>4.95</td><td>5.08</td></tr>
+    <tr><td>USD</td><td>4.35</td><td>4.49</td></tr>
+    <tr><td>GBP</td><td>5.78</td><td>5.94</td></tr>
+    <tr><td>CHF</td><td>5.28</td><td>5.43</td></tr>
+  </table>
+  <div class="op">
+    Op: <select id="op"><option>CUMP</option><option>VANZ</option></select>
+    Mon: <select id="mon"><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option></select>
+    Suma: <input id="suma">
+    <button class="mic" onclick="calc()">Calc</button>
+    <div id="rez">&nbsp;</div>
+    <button class="mic" onclick="chitanta()">Chit.</button><button class="mic" onclick="sterge()">Del</button>
+  </div>
+</div>
+
+<script>
+  // cursuri: [cumparare, vanzare]
+  var curs = { EUR: [4.95, 5.08], USD: [4.35, 4.49], GBP: [5.78, 5.94], CHF: [5.28, 5.43] };
+  var rezultat;
+
+  function calc() {
+    var op = document.getElementById('op').value;
+    var mon = document.getElementById('mon').value;
+    var s = parseFloat(document.getElementById('suma').value);
+    rezultat = s * curs[mon][op === 'CUMP' ? 0 : 1];
+    document.getElementById('rez').textContent = '= ' + rezultat;
+  }
+
+  // chitanta se emite chiar daca nu s-a calculat nimic
+  function chitanta() {
+    alert('CHITANTA\n' + document.getElementById('op').value + ' ' +
+      document.getElementById('suma').value + ' ' + document.getElementById('mon').value + '\nTOTAL RON ' + rezultat);
+  }
+
+  function sterge() {
+    document.getElementById('suma').value = '';
+    document.getElementById('rez').innerHTML = '&nbsp;';
+    rezultat = undefined;
+  }
+</script>
+<script src="../../assets/nivel.js" data-nivel="1"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Automat de cafea</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --cafe: #6e4222; --cafe-fond: #f5efe8; --cafe-activ: #fdf6ee; }
+    [data-bs-theme="dark"] { --cafe: #d9a774; --cafe-fond: #17120e; --cafe-activ: #2a1f17; }
+    body { background: var(--cafe-fond); padding-bottom: 90px; }
+    [data-bs-theme="dark"] .btn-outline-primary { --bs-btn-color: #8bb9fe; --bs-btn-border-color: #8bb9fe; --bs-btn-active-bg: #8bb9fe; --bs-btn-active-color: #0f1620; } [data-bs-theme="dark"] .btn-outline-secondary { --bs-btn-color: #c5ccd3; --bs-btn-border-color: #8a939b; }
+    .antet { background: #3f2618; color: #fff; }
+    .bautura { position: relative; display: block; height: 100%; padding: .8rem; min-height: 96px; cursor: pointer; border: 2px solid var(--bs-border-color); border-radius: .75rem; background: var(--bs-body-bg); transition: border-color .15s, transform .1s; }
+    .bautura:hover { border-color: var(--cafe); } .bautura:active { transform: scale(.98); } .pret { color: var(--cafe); font-weight: 700; }
+    .btn-zahar, .moneda, #card { min-height: 44px; }
+    .btn-check:checked + .bautura { border-color: var(--cafe); background: var(--cafe-activ); box-shadow: 0 0 0 .25rem rgba(110, 66, 34, .2); }
+    .btn-check:checked + .bautura::after { content: "✓"; position: absolute; top: .5rem; right: .7rem; color: var(--cafe); font-weight: 700; }
+    .btn-check:disabled + .bautura { opacity: .55; cursor: not-allowed; }
+    .btn-check:focus-visible + .bautura, .btn-check:focus-visible + .btn, .btn:focus-visible { outline: 3px solid #e3a008; outline-offset: 2px; }
+    .btn-cafe { --bs-btn-bg: var(--cafe); --bs-btn-border-color: var(--cafe); --bs-btn-color: var(--bs-body-bg); --bs-btn-hover-bg: var(--cafe); --bs-btn-hover-color: var(--bs-body-bg); --bs-btn-disabled-bg: var(--cafe); --bs-btn-disabled-color: var(--bs-body-bg); --bs-btn-disabled-opacity: .4; min-height: 52px; }
+    .btn-zahar { --bs-btn-color: var(--cafe); --bs-btn-border-color: var(--cafe); --bs-btn-active-bg: var(--cafe); --bs-btn-active-color: var(--bs-body-bg); --bs-btn-active-border-color: var(--cafe); }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="antet py-3 mb-4"><div class="container d-flex align-items-center gap-3">
+    <div class="me-auto"><h1 class="h4 mb-0">Cafenea Expres</h1><small class="opacity-75">Băuturi calde · monede, bancnote sau card</small></div>
+    <button id="tema" class="btn btn-sm btn-outline-light text-nowrap" aria-pressed="false" title="Comută între modul luminos și cel întunecat">Mod întunecat</button></div></header>
+  <main class="container">
+    <div class="row g-4">
+      <section class="col-lg-7">
+        <fieldset class="mb-4"><legend class="h5 mb-3">1. Alegeți băutura</legend>
+          <div id="bauturi" class="row row-cols-2 row-cols-md-3 g-3"></div></fieldset>
+        <fieldset><legend class="h5 mb-3">2. Cât zahăr doriți?</legend>
+          <div id="zahar" class="btn-group w-100"></div>
+          <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="tine"><label class="form-check-label small" for="tine">Ține minte zahărul ales pentru data viitoare</label></div></fieldset>
+      </section>
+      <section class="col-lg-5" aria-labelledby="t3">
+        <div class="card shadow-sm border-0"><div class="card-body p-4">
+          <h2 id="t3" class="h5 mb-3">3. Comanda și plata</h2>
+          <dl id="rezumat" class="row mb-3"></dl>
+          <div id="bani" class="d-flex flex-wrap gap-2 mb-1" role="group" aria-label="Introduceți bani">
+            <button id="card" class="btn btn-outline-primary ms-auto order-last" title="Plătiți exact prețul, fără rest">Plătesc cu cardul</button></div>
+          <p id="indiciu" class="small text-body-secondary mb-3">Butonul „Preparează” devine activ după ce alegeți băutura și plătiți.</p>
+          <button id="prepara" class="btn btn-cafe btn-lg w-100" disabled>Preparează</button>
+          <button id="anuleaza" class="btn btn-link w-100 mt-1 text-body-secondary">Anulează comanda <kbd class="d-none d-md-inline">Esc</kbd></button>
+          <div id="progres" class="progress mt-3 d-none" role="progressbar" aria-label="Prepararea băuturii" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-bar bg-success" style="width: 0%"></div></div>
+          <div id="mesaj" class="alert alert-info mt-3 mb-0" role="status" aria-live="polite">Alegeți o băutură pentru a începe.</div>
+        </div></div>
+      </section>
+    </div>
+  </main>
+  <div class="modal fade" id="confirmare" tabindex="-1" aria-labelledby="tc" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title h5" id="tc">Anulați comanda?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button></div>
+    <div class="modal-body" id="tcText"></div>
+    <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Nu, continui comanda</button><button id="daAnuleaza" class="btn btn-danger">Da, anulează</button></div></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Date: bauturi, cantitati de zahar, etapele prepararii
+    const BAUTURI = [
+      { nume: 'Espresso', pret: 5, desc: 'scurt și intens, 40 ml', ingr: 'cafea, apă' },
+      { nume: 'Cafea lungă', pret: 5, desc: 'cafea neagră, 150 ml', ingr: 'cafea, apă' },
+      { nume: 'Cappuccino', pret: 7, desc: 'cu spumă de lapte', ingr: 'cafea, lapte, apă' },
+      { nume: 'Latte macchiato', pret: 8, desc: 'mult lapte, 250 ml', ingr: 'cafea, lapte, apă' },
+      { nume: 'Ciocolată caldă', pret: 7, desc: 'revine în curând', ingr: 'cacao, lapte, zahăr', stoc: false },
+      { nume: 'Ceai negru', pret: 4, desc: 'la plic, 200 ml', ingr: 'ceai negru, apă' },
+    ];
+    const ZAHAR = ['Fără', 'Puțin', 'Normal', 'Mult'], ETAPE = ['Se încălzește apa', 'Se prepară băutura', 'Se toarnă în pahar'];
+    const $ = id => document.getElementById(id);
+    // localStorage poate lipsi (navigare privata): erorile sunt ignorate
+    const citeste = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    const scrie = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+    const lei = v => v.toLocaleString('ro-RO', { minimumFractionDigits: 2 }) + ' lei';
+    let ales = null, zahar = citeste('zahar') !== null ? +citeste('zahar') : 2, credit = 0, ocupat = false;
+    const modal = new bootstrap.Modal($('confirmare'));
+    // Tema: preferinta salvata sau cea a sistemului
+    function seteazaTema(t) { document.documentElement.dataset.bsTheme = t; scrie('tema', t); $('tema').setAttribute('aria-pressed', t === 'dark');
+      $('tema').textContent = t === 'dark' ? 'Mod luminos' : 'Mod întunecat'; }
+    seteazaTema(citeste('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    $('tema').onclick = () => seteazaTema(document.documentElement.dataset.bsTheme === 'dark' ? 'light' : 'dark');
+    $('tine').checked = citeste('zahar') !== null;
+    // Optiunile sunt butoane radio: se aleg cu mouse-ul, cu degetul sau cu sagetile
+    BAUTURI.forEach((b, i) => $('bauturi').insertAdjacentHTML('beforeend', `<div class="col">
+      <input type="radio" class="btn-check" name="bautura" id="b${i}" value="${i}" ${b.stoc === false ? 'disabled' : ''}>
+      <label class="bautura" for="b${i}" title="Ingrediente: ${b.ingr}"><span class="fw-semibold d-block">${b.nume}</span>
+        <span class="small text-body-secondary d-block">${b.desc}</span>
+        ${b.stoc === false ? '<span class="badge text-bg-secondary mt-1">Indisponibil</span>' : `<span class="pret d-block mt-1">${lei(b.pret)}</span>`}</label></div>`));
+    ZAHAR.forEach((z, i) => $('zahar').insertAdjacentHTML('beforeend', `<input type="radio" class="btn-check" name="zahar" id="z${i}" value="${i}" ${i === zahar ? 'checked' : ''}>
+      <label class="btn btn-zahar" for="z${i}">${z}</label>`));
+    [[1, 'Monedă de 1 leu'], [5, 'Bancnotă de 5 lei'], [10, 'Bancnotă de 10 lei; restul se dă în monede']].forEach(([v, t]) => $('bani').insertAdjacentHTML('beforeend',
+      `<button class="btn btn-outline-secondary moneda" data-v="${v}" title="${t}">+${v} ${v === 1 ? 'leu' : 'lei'}</button>`));
+    [['Băutura', 'sBautura'], ['Zahăr', 'sZahar'], ['Preț', 'sPret'], ['Credit introdus', 'sCredit']].forEach(([t, id]) => $('rezumat').insertAdjacentHTML('beforeend',
+      `<dt class="col-6 fw-normal text-body-secondary">${t}</dt><dd class="col-6 text-end fw-semibold mb-1" id="${id}"></dd>`));
+    document.querySelectorAll('[title]').forEach(el => new bootstrap.Tooltip(el));
+    function goleste() { ales = null; credit = 0; document.querySelectorAll('input[name=bautura]').forEach(r => r.checked = false); }
+    function mesaj(tip, text) { $('mesaj').className = 'alert alert-' + tip + ' mt-3 mb-0'; $('mesaj').textContent = text; }
+    function actualizeaza() {
+      const pret = ales === null ? 0 : BAUTURI[ales].pret, suficient = ales !== null && credit >= pret;
+      $('sBautura').textContent = ales === null ? '–' : BAUTURI[ales].nume;
+      $('sZahar').textContent = ZAHAR[zahar];
+      $('sPret').textContent = ales === null ? '–' : lei(pret);
+      $('sCredit').textContent = lei(credit);
+      document.querySelectorAll('input[name]').forEach(el => el.disabled = ocupat || (el.name === 'bautura' && BAUTURI[el.value].stoc === false));
+      // prevenire: nu mai primim bani dupa ce pretul este acoperit
+      document.querySelectorAll('.moneda').forEach(m => m.disabled = ocupat || suficient || credit >= 20);
+      $('card').disabled = ocupat || ales === null || suficient;
+      $('prepara').disabled = ocupat || !suficient;
+      $('indiciu').textContent = suficient ? 'Prețul este acoperit; nu mai este nevoie de bani.' : 'Butonul „Preparează” devine activ după ce alegeți băutura și plătiți.';
+      if (ocupat) return;
+      if (ales === null) mesaj('info', credit > 0 ? `Aveți ${lei(credit)} credit. Alegeți o băutură.` : 'Alegeți o băutură pentru a începe.');
+      else if (!suficient) mesaj('warning', `Mai introduceți ${lei(pret - credit)} sau plătiți cu cardul.`);
+      else mesaj('success', 'Gata de preparare. Apăsați „Preparează”' + (credit > pret ? ` – primiți rest ${lei(credit - pret)}.` : '.'));
+    }
+    // Prepararea: bara de progres cu etape, apoi mesajul final
+    function prepara(rest) {
+      const b = BAUTURI[ales], bara = $('progres'); let p = 0;
+      ocupat = true; actualizeaza(); bara.classList.remove('d-none');
+      const t = setInterval(() => {
+        p += 5; bara.firstElementChild.style.width = p + '%'; bara.setAttribute('aria-valuenow', p);
+        if (p % 35 === 5) mesaj('info', `${ETAPE[Math.min(2, Math.floor(p / 35))]}… (${b.nume}, zahăr: ${ZAHAR[zahar].toLowerCase()})`);
+        if (p < 100) return;
+        clearInterval(t); bara.classList.add('d-none'); ocupat = false; goleste(); actualizeaza(); $('b0').focus();
+        mesaj('success', `${b.nume} este gata. Luați paharul din compartiment.` + (rest > 0 ? ` Restul de ${lei(rest)} este în tavă.` : ' Poftă bună!'));
+      }, 150);
+    }
+    $('bauturi').addEventListener('change', e => { ales = +e.target.value; actualizeaza(); });
+    $('zahar').addEventListener('change', e => { zahar = +e.target.value; if ($('tine').checked) scrie('zahar', zahar); actualizeaza(); });
+    $('tine').onchange = () => scrie('zahar', $('tine').checked ? zahar : null);
+    document.querySelectorAll('.moneda').forEach(m => m.onclick = () => { credit += +m.dataset.v; actualizeaza(); });
+    $('prepara').onclick = () => prepara(credit - BAUTURI[ales].pret);
+    $('card').onclick = () => { ocupat = true; actualizeaza(); mesaj('info', 'Apropiați cardul de cititor…');
+      setTimeout(() => { const inapoi = credit; credit = BAUTURI[ales].pret; prepara(inapoi); }, 1200); };
+    // Anularea cere confirmare doar daca exista ceva de pierdut
+    function cereAnulare() {
+      if (ocupat || (ales === null && credit === 0)) return;
+      $('tcText').textContent = credit > 0 ? `Veți primi înapoi ${lei(credit)}, iar alegerea se pierde.` : 'Alegerea băuturii se pierde.';
+      modal.show();
+    }
+    $('anuleaza').onclick = cereAnulare;
+    $('daAnuleaza').onclick = () => {
+      const inapoi = credit; goleste(); modal.hide(); actualizeaza(); mesaj('secondary', 'Comanda a fost anulată.' + (inapoi > 0 ? ` Luați ${lei(inapoi)} din tavă.` : ''));
+    };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('confirmare').classList.contains('show')) cereAnulare(); });
+    actualizeaza();
+  </script>
+  <script src="../../assets/nivel.js" data-nivel="4"></script>
+</body>
+</html>

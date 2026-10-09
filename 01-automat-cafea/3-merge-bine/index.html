@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Automat de cafea</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f5efe8; padding-bottom: 90px; }
+    .antet { background: #4a2c1d; color: #fff; }
+    .pas { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #4a2c1d; color: #fff; font-size: .9rem; margin-right: .4rem; }
+    .bautura { width: 100%; height: 100%; text-align: left; padding: .8rem; border: 2px solid #e4d7c8; border-radius: .75rem; background: #fff; transition: border-color .15s, box-shadow .15s; }
+    .bautura:hover:not(:disabled) { border-color: #b8865a; }
+    .bautura.activ { border-color: #7a4a26; background: #fdf6ee; box-shadow: 0 0 0 .25rem rgba(122, 74, 38, .18); }
+    .bautura .pret { color: #7a4a26; font-weight: 700; }
+    .btn-cafe { background: #7a4a26; border-color: #7a4a26; color: #fff; }
+    .btn-cafe:hover, .btn-cafe:focus { background: #5f381b; color: #fff; }
+    .btn-cafe:disabled { background: #7a4a26; border-color: #7a4a26; color: #fff; opacity: .4; }
+    .btn-check:checked + .btn-outline-cafe, .btn-outline-cafe.active { background: #7a4a26; color: #fff; }
+    .btn-outline-cafe { border-color: #7a4a26; color: #7a4a26; }
+  </style>
+</head>
+<body>
+  <header class="antet py-3 mb-4">
+    <div class="container"><h1 class="h4 mb-0">Cafenea Expres</h1>
+      <small class="opacity-75">Băuturi calde · plata cu monede, bancnote sau card</small></div>
+  </header>
+  <main class="container">
+    <div class="row g-4">
+      <section class="col-lg-7">
+        <h2 class="h5 mb-3"><span class="pas">1</span>Alegeți băutura</h2>
+        <div id="bauturi" class="row row-cols-2 row-cols-md-3 g-3 mb-4"></div>
+        <h2 class="h5 mb-3"><span class="pas">2</span>Cât zahăr doriți?</h2>
+        <div id="zahar" class="btn-group w-100" role="group" aria-label="Cantitatea de zahăr"></div>
+      </section>
+      <section class="col-lg-5">
+        <div class="card shadow-sm border-0">
+          <div class="card-body p-4">
+            <h2 class="h5 mb-3"><span class="pas">3</span>Comanda și plata</h2>
+            <dl class="row mb-3">
+              <dt class="col-6 fw-normal text-body-secondary">Băutura</dt><dd class="col-6 text-end fw-semibold" id="sBautura">–</dd>
+              <dt class="col-6 fw-normal text-body-secondary">Zahăr</dt><dd class="col-6 text-end" id="sZahar">–</dd>
+              <dt class="col-6 fw-normal text-body-secondary">Preț</dt><dd class="col-6 text-end" id="sPret">–</dd>
+              <dt class="col-6 fw-normal text-body-secondary">Credit introdus</dt><dd class="col-6 text-end fw-semibold" id="sCredit">0,00 lei</dd>
+            </dl>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              <button class="btn btn-outline-secondary moneda" data-v="1" data-bs-toggle="tooltip" title="Monedă de 1 leu">+1 leu</button>
+              <button class="btn btn-outline-secondary moneda" data-v="5" data-bs-toggle="tooltip" title="Bancnotă de 5 lei">+5 lei</button>
+              <button class="btn btn-outline-secondary moneda" data-v="10" data-bs-toggle="tooltip" title="Bancnotă de 10 lei. Restul se dă în monede.">+10 lei</button>
+              <button id="card" class="btn btn-outline-primary ms-auto" data-bs-toggle="tooltip" title="Plătiți exact prețul băuturii, fără rest">Plătesc cu cardul</button>
+            </div>
+            <button id="prepara" class="btn btn-cafe btn-lg w-100" disabled>Preparează</button>
+            <button id="anuleaza" class="btn btn-link w-100 mt-1 text-body-secondary">Anulează și returnează creditul</button>
+            <div id="progres" class="progress mt-3 d-none" role="progressbar" aria-label="Prepararea băuturii">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
+            </div>
+            <div id="mesaj" class="alert alert-info mt-3 mb-0">Alegeți o băutură pentru a începe.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Datele aplicatiei: bauturile disponibile si cantitatile de zahar
+    const BAUTURI = [
+      { nume: 'Espresso', pret: 5, desc: 'scurt și intens, 40 ml', ingr: 'cafea, apă' },
+      { nume: 'Cafea lungă', pret: 5, desc: 'cafea neagră, 150 ml', ingr: 'cafea, apă' },
+      { nume: 'Cappuccino', pret: 7, desc: 'cu spumă de lapte', ingr: 'cafea, lapte, apă' },
+      { nume: 'Latte macchiato', pret: 8, desc: 'mult lapte, 250 ml', ingr: 'cafea, lapte, apă' },
+      { nume: 'Ciocolată caldă', pret: 7, desc: 'cremoasă', ingr: 'cacao, lapte, zahăr', stoc: false },
+      { nume: 'Ceai negru', pret: 4, desc: 'la plic, 200 ml', ingr: 'ceai negru, apă' },
+    ];
+    const ZAHAR = ['Fără', 'Puțin', 'Normal', 'Mult'];
+    let ales = null, zahar = 2, credit = 0, ocupat = false;
+    const $ = id => document.getElementById(id);
+    const lei = v => v.toLocaleString('ro-RO', { minimumFractionDigits: 2 }) + ' lei';
+
+    function mesaj(tip, text) { $('mesaj').className = 'alert alert-' + tip + ' mt-3 mb-0'; $('mesaj').textContent = text; }
+
+    // Construim cardurile bauturilor si butoanele pentru zahar
+    BAUTURI.forEach((b, i) => {
+      $('bauturi').insertAdjacentHTML('beforeend', `<div class="col">
+        <button class="bautura" data-i="${i}" ${b.stoc === false ? 'disabled' : ''} data-bs-toggle="tooltip" title="Ingrediente: ${b.ingr}">
+          <div class="fw-semibold">${b.nume}</div><div class="small text-body-secondary">${b.desc}</div>
+          ${b.stoc === false ? '<span class="badge text-bg-secondary mt-1">Indisponibil</span>' : `<div class="pret mt-1">${lei(b.pret)}</div>`}
+        </button></div>`);
+    });
+    ZAHAR.forEach((z, i) => $('zahar').insertAdjacentHTML('beforeend',
+      `<button class="btn btn-outline-cafe ${i === zahar ? 'active' : ''}" data-z="${i}">${z}</button>`));
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+    function actualizeaza() {
+      document.querySelectorAll('.bautura').forEach(b => b.classList.toggle('activ', +b.dataset.i === ales));
+      document.querySelectorAll('[data-z]').forEach(b => b.classList.toggle('active', +b.dataset.z === zahar));
+      const pret = ales === null ? 0 : BAUTURI[ales].pret;
+      $('sBautura').textContent = ales === null ? '–' : BAUTURI[ales].nume;
+      $('sZahar').textContent = ZAHAR[zahar];
+      $('sPret').textContent = ales === null ? '–' : lei(pret);
+      $('sCredit').textContent = lei(credit);
+      $('prepara').disabled = ocupat || ales === null || credit < pret;
+      $('card').disabled = ocupat || ales === null;
+      if (ocupat) return;
+      if (ales === null) mesaj('info', 'Alegeți o băutură pentru a începe.');
+      else if (credit < pret) mesaj('warning', `Mai introduceți ${lei(pret - credit)} sau plătiți cu cardul.`);
+      else mesaj('success', 'Credit suficient. Apăsați „Preparează”' + (credit > pret ? ` – primiți rest ${lei(credit - pret)}.` : '.'));
+    }
+
+    // Prepararea: bara de progres, apoi mesajul final
+    function prepara(rest) {
+      ocupat = true; actualizeaza();
+      const b = BAUTURI[ales];
+      $('progres').classList.remove('d-none');
+      mesaj('info', `Se prepară ${b.nume.toLowerCase()} (zahăr: ${ZAHAR[zahar].toLowerCase()})…`);
+      let p = 0;
+      const t = setInterval(() => {
+        p += 10; $('progres').firstElementChild.style.width = p + '%';
+        if (p < 100) return;
+        clearInterval(t);
+        $('progres').classList.add('d-none'); $('progres').firstElementChild.style.width = '0%';
+        ocupat = false; ales = null; credit = 0; actualizeaza();
+        mesaj('success', `${b.nume} este gata. Luați paharul din compartiment.` + (rest > 0 ? ` Restul de ${lei(rest)} este în tavă.` : ''));
+      }, 300);
+    }
+
+    $('bauturi').addEventListener('click', e => { const b = e.target.closest('.bautura'); if (b && !ocupat) { ales = +b.dataset.i; actualizeaza(); } });
+    $('zahar').addEventListener('click', e => { if (e.target.dataset.z && !ocupat) { zahar = +e.target.dataset.z; actualizeaza(); } });
+    document.querySelectorAll('.moneda').forEach(m => m.addEventListener('click', () => { if (!ocupat) { credit += +m.dataset.v; actualizeaza(); } }));
+    $('prepara').addEventListener('click', () => prepara(credit - BAUTURI[ales].pret));
+    $('card').addEventListener('click', () => {
+      ocupat = true; actualizeaza();
+      mesaj('info', 'Apropiați cardul de cititor…');
+      // monedele introduse deja se returneaza ca rest
+      setTimeout(() => { const inapoi = credit; credit = BAUTURI[ales].pret; ocupat = false; prepara(inapoi); }, 1200);
+    });
+    $('anuleaza').addEventListener('click', () => {
+      if (ocupat) return;
+      const inapoi = credit; ales = null; credit = 0; actualizeaza();
+      mesaj('secondary', inapoi > 0 ? `Comanda a fost anulată. Ați primit înapoi ${lei(inapoi)}.` : 'Comanda a fost anulată.');
+    });
+    actualizeaza();
+  </script>
+  <script src="../../assets/nivel.js" data-nivel="3"></script>
+</body>
+</html>

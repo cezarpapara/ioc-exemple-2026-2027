@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meniu restaurant</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .antet { background: linear-gradient(120deg, #5b2a12, #8d4a1f); }
+    .produs { transition: box-shadow .2s, transform .2s; }
+    .produs:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important; }
+    .cant { width: 2.2rem; text-align: center; }
+    :focus-visible { outline: 3px solid #f0b429 !important; outline-offset: 2px; }
+    [data-bs-theme=dark] .btn-outline-primary { --bs-btn-color: #6ea8fe; --bs-btn-border-color: #6ea8fe; }
+    [data-bs-theme=dark] .btn-outline-secondary { --bs-btn-color: #ced4da; --bs-btn-border-color: #adb5bd; }
+    @media (prefers-reduced-motion: reduce) { .produs { transition: none; } .produs:hover { transform: none; } }
+  </style>
+</head>
+<body class="bg-body-tertiary">
+<header class="antet text-white py-4 mb-4">
+  <div class="container"><h1 class="h3 mb-1">Bistro Campus</h1>
+    <p class="mb-0">Livrare în 30–45 de minute · taxa de livrare 9,90 lei, gratuită pentru comenzi de minimum 100 lei</p></div>
+</header>
+<main class="container pb-5">
+  <div class="row g-4">
+    <section class="col-lg-8" aria-labelledby="titluMeniu">
+      <h2 class="visually-hidden" id="titluMeniu">Meniu</h2>
+      <ul class="nav nav-pills mb-3" id="categorii" aria-label="Categorii"></ul>
+      <div class="row g-3" id="produse"></div>
+    </section>
+    <aside class="col-lg-4" id="cos" aria-labelledby="titluCos">
+      <div class="card shadow-sm sticky-lg-top" style="top: 1rem"><div class="card-body">
+        <h2 class="h5 mb-0" id="titluCos" tabindex="-1">Coșul dvs.</h2>
+        <div id="mesaj" class="mt-2" role="status" aria-live="polite"></div>
+        <ul class="list-group list-group-flush mb-2" id="linii"></ul>
+        <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="subtotal"></span></div>
+        <div class="d-flex justify-content-between small"><span>Livrare</span><span id="livrare"></span></div>
+        <div class="d-flex justify-content-between fw-bold border-top mt-2 pt-2"><span>Total de plată</span><span id="total"></span></div>
+        <p class="small text-body-secondary mb-0" id="info"></p>
+        <form id="form" class="mt-3" novalidate>
+          <div class="mb-2"><label class="form-label small" for="nume">Nume</label>
+            <input class="form-control" id="nume" autocomplete="name" required minlength="3"><div class="invalid-feedback">Scrieți numele (cel puțin 3 litere).</div></div>
+          <div class="mb-2"><label class="form-label small" for="tel">Telefon mobil</label>
+            <input class="form-control" id="tel" type="tel" inputmode="numeric" autocomplete="tel" required pattern="07[0-9]{8}" maxlength="10" placeholder="07xxxxxxxx" aria-describedby="telErr">
+            <div class="invalid-feedback" id="telErr">Introduceți un număr de 10 cifre care începe cu 07.</div></div>
+          <div class="mb-2"><label class="form-label small" for="adresa">Adresa de livrare</label>
+            <input class="form-control" id="adresa" autocomplete="street-address" required><div class="invalid-feedback">Scrieți strada, numărul și, dacă e cazul, apartamentul.</div></div>
+          <div class="form-check small"><input class="form-check-input" type="checkbox" id="tacamuri">
+            <label class="form-check-label" for="tacamuri">Doresc tacâmuri de unică folosință (gratuit)</label></div>
+          <div class="form-check small mb-3"><input class="form-check-input" type="checkbox" id="oferte">
+            <label class="form-check-label" for="oferte">Doresc să primesc oferte prin e-mail (opțional; vă puteți dezabona oricând)</label></div>
+          <div id="verificare" class="alert alert-warning small d-none" tabindex="-1"></div>
+          <button class="btn btn-success w-100" id="trimite">Verifică comanda</button>
+          <button type="button" class="btn btn-link btn-sm w-100 d-none" id="modifica">Modific comanda</button>
+        </form>
+      </div></div>
+    </aside>
+  </div>
+</main>
+<a href="#titluCos" class="btn btn-success shadow position-fixed end-0 m-3 d-lg-none" style="bottom: 3.25rem" id="barMobil">Coș</a>
+<div class="toast-container position-fixed top-0 end-0 p-3"><div class="toast text-bg-dark" id="toast" role="status" aria-live="polite"><div class="toast-body" id="toastText"></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const MENIU = [
+    { id: 1, cat: 'Ciorbe', nume: 'Ciorbă de burtă', desc: 'Cu smântână și ardei iute.', pret: 24 },
+    { id: 2, cat: 'Ciorbe', nume: 'Supă cremă de linte', desc: 'Cu crutoane de casă.', pret: 19, veg: true },
+    { id: 3, cat: 'Feluri principale', nume: 'Sarmale cu mămăliguță', desc: 'Patru bucăți, cu smântână.', pret: 38 },
+    { id: 4, cat: 'Feluri principale', nume: 'Piept de pui la grătar', desc: 'Cu legume coapte.', pret: 36 },
+    { id: 5, cat: 'Feluri principale', nume: 'Tocăniță de ciuperci', desc: 'Cu mămăliguță.', pret: 32, veg: true },
+    { id: 6, cat: 'Desert', nume: 'Papanași', desc: 'Cu dulceață de afine și smântână.', pret: 26, veg: true },
+    { id: 7, cat: 'Băuturi', nume: 'Limonadă cu mentă', desc: '400 ml.', pret: 14, veg: true },
+  ];
+  const LIVRARE = 9.9, PRAG = 100, MAX = 10, $ = id => document.getElementById(id);
+  const citeste = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const scrie = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignorat */ } };
+  let cos = citeste('cos-ex07', {}), categorie = 'Toate', copie = null;
+  const lei = n => n.toFixed(2).replace('.', ',') + ' lei', produs = id => MENIU.find(p => p.id === Number(id));
+  const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // Modul intunecat urmeaza preferinta din sistemul de operare
+  const tema = matchMedia('(prefers-color-scheme: dark)'), aplicaTema = () => document.documentElement.dataset.bsTheme = tema.matches ? 'dark' : 'light';
+  aplicaTema(); tema.addEventListener('change', aplicaTema);
+  function anunta(html, tip = 'info', anulare = false) {
+    $('mesaj').innerHTML = `<div class="alert alert-${tip} small py-2 mb-2 d-flex align-items-center gap-2"><span class="me-auto">${html}</span>
+      ${anulare ? '<button class="btn btn-sm btn-primary" id="anuleaza">Anulează</button>' : ''}</div>`;
+    if (anulare) $('anuleaza').onclick = () => { cos = copie; afiseazaCos(); anunta('Produsul a fost readus în coș.', 'success'); };
+  }
+  function afiseazaMeniu() {
+    $('categorii').innerHTML = ['Toate', ...new Set(MENIU.map(p => p.cat))].map(c => `<li class="nav-item"><button class="nav-link ${c === categorie ? 'active' : ''}"
+      aria-pressed="${c === categorie}" data-cat="${c}">${c}</button></li>`).join('');
+    $('produse').innerHTML = MENIU.filter(p => categorie === 'Toate' || p.cat === categorie).map(p => `<div class="col-sm-6"><article class="card produs h-100 shadow-sm"><div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between gap-2"><h3 class="h6 mb-1">${p.nume}</h3><span class="fw-semibold text-nowrap">${lei(p.pret)}</span></div>
+        <p class="small text-body-secondary mb-3">${p.desc}</p>
+        <div class="mt-auto d-flex align-items-center">${p.veg ? '<span class="badge text-bg-success" data-bs-toggle="tooltip" data-bs-title="Preparat fără carne">Vegetarian</span>' : ''}
+          <button class="btn btn-sm btn-outline-primary ms-auto" data-adauga="${p.id}" aria-label="Adaugă în coș: ${p.nume}, ${lei(p.pret)}">Adaugă în coș</button></div>
+      </div></article></div>`).join('');
+    document.querySelectorAll('.tooltip').forEach(t => t.remove()); document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+  }
+  function totaluri() {
+    const sub = Object.entries(cos).reduce((s, [id, n]) => s + produs(id).pret * n, 0), livrare = sub === 0 || sub >= PRAG ? 0 : LIVRARE;
+    return { sub, livrare, total: sub + livrare, buc: Object.values(cos).reduce((a, b) => a + b, 0) };
+  }
+  function afiseazaCos() {
+    scrie('cos-ex07', cos);
+    // Butoanele -, + si x din cos; limitele (1 si MAX portii) dezactiveaza butonul corespunzator
+    const t = totaluri(), btn = (act, id, txt, lbl, dis) =>
+      `<button class="btn btn-outline-secondary" data-${act}="${id}" aria-label="${lbl}" title="${lbl}"${dis ? ' disabled' : ''}>${txt}</button>`;
+    $('linii').innerHTML = t.buc ? Object.entries(cos).map(([id, n]) => `<li class="list-group-item px-0">
+        <div class="d-flex justify-content-between small mb-1"><span>${produs(id).nume}</span><span class="text-nowrap">${lei(produs(id).pret * n)}</span></div>
+        <div class="btn-group btn-group-sm">${btn('minus', id, '−', 'Scade cantitatea', n <= 1)}<span class="btn btn-outline-secondary cant fw-semibold pe-none" aria-label="${n} porții">${n}</span>
+          ${btn('plus', id, '+', n >= MAX ? 'Maximum ' + MAX + ' porții' : 'Crește cantitatea', n >= MAX)}${btn('sterge', id, '×', 'Elimină ' + produs(id).nume)}</div></li>`).join('')
+      : '<li class="list-group-item px-0 text-body-secondary small">Coșul este gol. Alegeți preparate din meniu.</li>';
+    $('subtotal').textContent = lei(t.sub); $('total').textContent = lei(t.total);
+    $('livrare').textContent = t.sub === 0 ? '–' : t.livrare ? lei(t.livrare) : 'gratuită';
+    $('info').textContent = t.buc ? 'Prețurile includ TVA. Totalul afișat este cel final: nu se adaugă alte taxe.' +
+      (t.livrare ? ` Livrarea devine gratuită de la ${lei(PRAG)} (mai sunt ${lei(PRAG - t.sub)}).` : '') : '';
+    $('trimite').disabled = !t.buc;
+    $('barMobil').textContent = `Vezi coșul (${t.buc}) · ${lei(t.total)}`;
+    inapoi();
+  }
+  // Revenire din pasul de verificare la editarea comenzii
+  function inapoi() { $('verificare').classList.add('d-none'); $('modifica').classList.add('d-none'); $('trimite').textContent = 'Verifică comanda'; }
+  function toast(text) { $('toastText').textContent = text; bootstrap.Toast.getOrCreateInstance($('toast'), { delay: 2500 }).show(); }
+  $('categorii').addEventListener('click', e => { if (e.target.dataset.cat) { categorie = e.target.dataset.cat; afiseazaMeniu(); } });
+  $('produse').addEventListener('click', e => {
+    const id = e.target.dataset.adauga; if (!id) return;
+    if ((cos[id] || 0) >= MAX) return anunta(`Puteți comanda cel mult ${MAX} porții din același preparat.`, 'warning');
+    cos[id] = (cos[id] || 0) + 1; afiseazaCos();
+    toast(`Ați adăugat în coș: ${produs(id).nume} (${cos[id]} ${cos[id] === 1 ? 'porție' : 'porții'}). Total: ${lei(totaluri().total)}.`);
+  });
+  $('linii').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const { plus, minus, sterge } = b.dataset, id = plus || minus || sterge;
+    if (plus) cos[plus]++; if (minus) cos[minus]--;
+    if (sterge) { copie = { ...cos }; delete cos[sterge]; }
+    afiseazaCos();
+    if (sterge) { anunta(`Ați eliminat din coș: ${produs(id).nume}.`, 'secondary', true); $('titluCos').focus(); }
+    else document.querySelector(`[data-${plus ? 'plus' : 'minus'}="${id}"]:not(:disabled)`)?.focus();
+  });
+  $('modifica').addEventListener('click', () => { inapoi(); $('nume').focus(); });
+  $('form').addEventListener('input', e => { e.target.classList.remove('is-invalid'); inapoi(); });
+  // Doi pasi: intai verificare (rezumat), apoi confirmare
+  $('form').addEventListener('submit', e => {
+    e.preventDefault(); ['nume', 'tel', 'adresa'].forEach(id => $(id).classList.toggle('is-invalid', !$(id).checkValidity()));
+    if (!$('form').checkValidity()) return $('form').querySelector(':invalid').focus();
+    const t = totaluri(), v = $('verificare');
+    if (v.classList.contains('d-none')) {
+      v.innerHTML = `<b>Verificați comanda:</b> ${t.buc} ${t.buc === 1 ? 'porție' : 'porții'}, total <b>${lei(t.total)}</b>. ` +
+        `Livrare la: ${esc($('adresa').value)}. Telefon: ${esc($('tel').value)}.`;
+      v.classList.remove('d-none'); $('modifica').classList.remove('d-none'); $('trimite').textContent = `Confirm și trimit (${lei(t.total)})`;
+      return v.focus();
+    }
+    anunta(`<b>Mulțumim, ${esc($('nume').value)}!</b> Comanda de ${lei(t.total)} a fost trimisă și ajunge în 30–45 de minute.`, 'success');
+    cos = {}; $('form').reset(); afiseazaCos(); $('titluCos').focus();
+  });
+  afiseazaMeniu(); afiseazaCos();
+</script>
+<script src="../../assets/nivel.js" data-nivel="4"></script>
+</body>
+</html>

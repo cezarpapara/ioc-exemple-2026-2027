@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Priză programabilă</title>
+<style>
+  body { font-family: Verdana, sans-serif; font-size: 11px; color: #a3a3a3; background: #f5f5f5; margin: 20px; }
+  .box { width: 540px; background: #fff; border: 1px solid #e4e4e4; padding: 10px 12px; }
+  h3 { color: #bdbdbd; font-weight: normal; margin: 0 0 10px; letter-spacing: 1px; }
+  .led { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #dcdcdc; }
+  .led.on { background: #cfe6cf; }
+  button { font-size: 10px; padding: 1px 4px; background: #efefef; border: 1px solid #e0e0e0; color: #a0a0a0; }
+  input, select { font-size: 10px; border: 1px solid #e8e8e8; color: #9c9c9c; }
+  input { width: 46px; }
+  hr { border: 0; border-top: 1px solid #f0f0f0; }
+  pre { color: #c2c2c2; margin: 8px 0 0; font-size: 10px; }
+  small { color: #d0d0d0; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h3>SP-200 SMART PLUG</h3>
+  <span class="led" id="led"></span>
+  <button id="pwr">ON/OFF</button>
+  &nbsp;&nbsp; MOD <select id="mod"><option>AUTO</option><option>MAN</option></select>
+  <hr>
+  P <select id="slot"><option>1</option><option>2</option><option>3</option><option>4</option></select>
+  T1 <input id="t1"> T2 <input id="t2"> D <input id="zile" style="width:70px">
+  <button id="ok">OK</button> <button id="clr">CLR</button>
+  <pre id="lista">---</pre>
+  <small>fw 1.0.3</small>
+</div>
+
+<script>
+  // Starea prizei si programele (maximum 4, cate unul pe slot)
+  let pornita = false;
+  const programe = {};
+  const led = document.getElementById('led');
+
+  function deseneaza() {
+    led.className = pornita ? 'led on' : 'led';
+    const linii = Object.keys(programe).map(p => 'P' + p + ' ' + programe[p].t1 + '-' + programe[p].t2 + ' ' + programe[p].zile);
+    document.getElementById('lista').textContent = linii.length ? linii.join('\n') : '---';
+  }
+
+  // Butonul functioneaza doar in modul MAN (utilizatorul nu este anuntat)
+  document.getElementById('pwr').onclick = function () {
+    if (document.getElementById('mod').value !== 'MAN') return;
+    pornita = !pornita;
+    deseneaza();
+  };
+
+  // Format asteptat: ora HHMM (ex. 0730) si zilele ca 7 cifre 0/1 (ex. 1111100)
+  document.getElementById('ok').onclick = function () {
+    const t1 = document.getElementById('t1').value;
+    const t2 = document.getElementById('t2').value;
+    const zile = document.getElementById('zile').value;
+    if (!/^\d{4}$/.test(t1) || !/^\d{4}$/.test(t2) || !/^[01]{7}$/.test(zile)) {
+      document.getElementById('lista').textContent = 'E3';
+      return;
+    }
+    programe[document.getElementById('slot').value] = { t1: t1, t2: t2, zile: zile };
+    deseneaza();
+  };
+
+  // Sterge toate programele, fara confirmare
+  document.getElementById('clr').onclick = function () {
+    for (const p in programe) delete programe[p];
+    deseneaza();
+  };
+
+  // In modul AUTO priza urmeaza programele
+  setInterval(function () {
+    if (document.getElementById('mod').value !== 'AUTO') return;
+    const d = new Date();
+    const zi = (d.getDay() + 6) % 7;
+    const acum = String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+    pornita = Object.values(programe).some(p => p.zile[zi] === '1' && acum >= p.t1 && acum < p.t2);
+    deseneaza();
+  }, 5000);
+</script>
+<script src="../../assets/nivel.js" data-nivel="1"></script>
+</body>
+</html>

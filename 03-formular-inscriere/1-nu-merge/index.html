@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Înscriere atelier</title>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; background: #fff; color: #444; }
+  .form { width: 420px; margin: 30px auto; }
+  h2 { font-weight: 300; color: #999; }
+  input, select, textarea { display: block; width: 100%; margin: 8px 0; padding: 6px; border: 0; border-bottom: 1px solid #e6e6e6; font-size: 13px; color: #444; }
+  ::placeholder { color: #d0d0d0; }
+  #err { color: #e57373; font-size: 11px; height: 14px; }
+  #ok { color: #bbb; font-size: 11px; margin-top: 30px; }
+  .btn1 { background: #2196f3; color: #fff; border: 0; padding: 10px 30px; font-size: 15px; }
+  .btn2 { background: #eee; color: #aaa; border: 0; padding: 4px 10px; font-size: 11px; }
+  label { font-size: 11px; color: #bbb; }
+</style>
+</head>
+<body>
+<div class="form">
+  <h2>Înscriere atelier</h2>
+  <div id="err"></div>
+  <form id="f">
+    <input id="nume" placeholder="Nume">
+    <input id="email" placeholder="Email">
+    <input id="tel" placeholder="Telefon">
+    <select id="spec">
+      <option value="">Specializare</option>
+      <option>INFO</option><option>TI</option><option>ALTA</option>
+    </select>
+    <select id="an">
+      <option value="">An</option><option>1</option><option>2</option><option>3</option><option>4</option>
+    </select>
+    <select id="ses">
+      <option value="">Sesiune</option><option>S1</option><option>S2</option>
+    </select>
+    <textarea id="obs" rows="2" placeholder="Observatii"></textarea>
+    <label><input type="checkbox" id="acord" style="display:inline;width:auto"> Accept</label>
+    <br>
+    <button type="reset" class="btn1">Resetează</button>
+    <button type="button" class="btn2" onclick="trimite()">Trimite</button>
+  </form>
+  <div id="ok"></div>
+</div>
+
+<script>
+  // validare stricta: telefonul trebuie sa fie exact 07xxxxxxxx
+  function trimite() {
+    var v = function (id) { return document.getElementById(id).value; };
+    var bun = v('nume').length > 2 &&
+      /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/.test(v('email')) &&
+      /^07\d{8}$/.test(v('tel')) &&
+      v('spec') && v('an') && v('ses') === 'S1' &&
+      document.getElementById('acord').checked;
+    if (!bun) {
+      document.getElementById('err').textContent = 'Formular invalid!';
+      document.getElementById('f').reset();
+      return;
+    }
+    document.getElementById('err').textContent = '';
+    document.getElementById('ok').textContent = 'Datele au fost trimise.';
+    document.getElementById('f').reset();
+  }
+</script>
+<script src="../../assets/nivel.js" data-nivel="1"></script>
+</body>
+</html>

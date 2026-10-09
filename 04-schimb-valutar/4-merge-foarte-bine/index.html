@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Schimb valutar</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --fond: #eef2f3; --rez: #e7f3f5; } [data-bs-theme="dark"] { --fond: #0d1517; --rez: #13262b; }
+    [data-bs-theme="dark"] .btn-outline-primary { --bs-btn-color: #8bb9fe; --bs-btn-border-color: #8bb9fe; --bs-btn-active-bg: #8bb9fe; --bs-btn-active-color: #0d1517; } [data-bs-theme="dark"] .btn-outline-secondary { --bs-btn-color: #c5ccd3; --bs-btn-border-color: #8a939b; }
+    body { background: var(--fond); padding-bottom: 90px; }
+    .antet { background: #0e4d5c; color: #fff; } .rezultat { background: var(--rez); border-radius: .75rem; }
+    .chitanta { font-family: ui-monospace, Consolas, monospace; font-size: .9rem; } .curs-ales { font-weight: 700; text-decoration: underline; }
+    .btn-check:focus-visible + .btn, .btn:focus-visible, .form-control:focus-visible, .form-select:focus-visible { outline: 3px solid #e3a008; outline-offset: 2px; }
+    @media print { body * { visibility: hidden; } .chitanta, .chitanta * { visibility: visible; } .chitanta { position: absolute; inset: 0 auto auto 0; } }
+  </style>
+</head>
+<body>
+  <header class="antet py-3 mb-4"><div class="container d-flex align-items-center gap-3">
+    <div class="me-auto"><h1 class="h4 mb-0">Casa de schimb valutar</h1><small class="opacity-75">Ghișeul 1 · cursuri demonstrative, valabile azi</small></div>
+    <button id="tema" class="btn btn-sm btn-outline-light text-nowrap" aria-pressed="false" title="Comută între modul luminos și cel întunecat">Mod întunecat</button></div></header>
+  <main class="container">
+    <div class="row g-4">
+      <section class="col-lg-7">
+        <div class="card border-0 shadow-sm"><div class="card-body p-4">
+          <div id="mesaj" aria-live="polite"></div>
+          <form id="f" novalidate>
+            <fieldset><legend class="h5 mb-3">Operațiune nouă</legend>
+              <div class="btn-group w-100 mb-1">
+                <input type="radio" class="btn-check" name="op" id="opV" value="1" checked><label class="btn btn-outline-primary py-2" for="opV">Clientul cumpără valută</label>
+                <input type="radio" class="btn-check" name="op" id="opC" value="0"><label class="btn btn-outline-primary py-2" for="opC">Clientul vinde valută</label></div>
+              <p id="explicatie" class="small text-body-secondary mb-3"></p></fieldset>
+            <div class="row g-3">
+              <div class="col-sm-6"><label for="mon" class="form-label">Moneda</label><select id="mon" class="form-select"></select></div>
+              <div class="col-sm-6"><label for="suma" class="form-label">Suma în valută</label>
+                <div class="input-group has-validation"><input id="suma" class="form-control" inputmode="numeric" autocomplete="off" aria-describedby="eroare ajutor">
+                  <span class="input-group-text" id="cod">EUR</span><div class="invalid-feedback" id="eroare"></div></div>
+                <div class="form-text" id="ajutor">Sume întregi, maximum 10.000. Casa nu lucrează cu monede în valută.</div></div>
+              <div class="col-12 d-flex flex-wrap gap-2" id="rapide" aria-label="Sume frecvente"></div>
+              <div class="col-12 d-none" id="blocClient"><label for="client" class="form-label">Numele clientului</label>
+                <input id="client" class="form-control" autocomplete="off" aria-describedby="hClient">
+                <div class="form-text" id="hClient">Obligatoriu peste 4.500 lei (regula casei): apare pe chitanță.</div></div>
+            </div>
+            <div class="rezultat p-3 mt-3" aria-live="polite">
+              <div class="small text-body-secondary" id="cursAplicat"></div>
+              <div class="d-flex justify-content-between align-items-baseline flex-wrap"><span id="eticheta"></span><span id="total" class="fs-3 fw-bold">–</span></div></div>
+            <div class="d-flex gap-2 mt-3"><button id="emite" class="btn btn-primary btn-lg flex-grow-1" disabled>Emite chitanța…</button>
+              <button type="button" id="goleste" class="btn btn-outline-secondary btn-lg" title="Șterge suma și numele clientului">Golește</button></div>
+          </form>
+        </div></div>
+      </section>
+      <aside class="col-lg-5">
+        <div class="card border-0 shadow-sm mb-4"><div class="card-body p-4">
+          <h2 class="h5 mb-3">Cursul zilei (lei pentru o unitate)</h2>
+          <table class="table align-middle mb-0"><thead><tr><th scope="col">Moneda</th>
+            <th scope="col" class="text-end"><span title="Prețul cu care casa cumpără valuta de la client">Cumpărare</span></th>
+            <th scope="col" class="text-end"><span title="Prețul cu care casa vinde valuta clientului">Vânzare</span></th></tr></thead><tbody id="cursuri"></tbody></table>
+        </div></div>
+        <div class="card border-0 shadow-sm"><div class="card-body p-4"><h2 class="h5 mb-2">Ultimele chitanțe</h2><ul id="istoric" class="list-unstyled small mb-0"></ul></div></div>
+      </aside>
+    </div>
+  </main>
+  <div class="modal fade" id="modal" tabindex="-1" aria-labelledby="tM" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title h5" id="tM"></h2><button class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button></div>
+    <div class="modal-body"><div id="chitanta" class="chitanta border rounded p-3 bg-body-tertiary"></div></div>
+    <div class="modal-footer" id="subsol"></div></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Cursuri demonstrative: [nume, cumparare, vanzare], in lei pentru o unitate
+    const CURS = { EUR: ['euro', 4.95, 5.08], USD: ['dolar american', 4.35, 4.49], GBP: ['liră sterlină', 5.78, 5.94], CHF: ['franc elvețian', 5.28, 5.43] };
+    const MAX = 10000, PRAG_CLIENT = 4500;
+    const $ = id => document.getElementById(id);
+    const fmt = (v, z = 2) => v.toLocaleString('ro-RO', { minimumFractionDigits: z, maximumFractionDigits: z });
+    const citeste = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+    const scrie = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    const modal = new bootstrap.Modal($('modal'));
+    let op = null;
+    function seteazaTema(t) { document.documentElement.dataset.bsTheme = t; scrie('tema', t); $('tema').setAttribute('aria-pressed', t === 'dark');
+      $('tema').textContent = t === 'dark' ? 'Mod luminos' : 'Mod întunecat'; }
+    seteazaTema(citeste('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    $('tema').onclick = () => seteazaTema(document.documentElement.dataset.bsTheme === 'dark' ? 'light' : 'dark');
+    Object.entries(CURS).forEach(([cod, [nume, c, v]]) => {
+      $('mon').insertAdjacentHTML('beforeend', `<option value="${cod}">${cod} – ${nume}</option>`);
+      $('cursuri').insertAdjacentHTML('beforeend', `<tr data-cod="${cod}"><th scope="row">${cod} <span class="small fw-normal text-body-secondary">${nume}</span></th>
+        <td class="text-end">${fmt(c, 4)}</td><td class="text-end">${fmt(v, 4)}</td></tr>`);
+    });
+    [50, 100, 200, 500].forEach(s => $('rapide').insertAdjacentHTML('beforeend', `<button type="button" class="btn btn-outline-secondary px-3" data-s="${s}" aria-label="Suma ${s}">${s}</button>`));
+    document.querySelectorAll('[title]').forEach(el => new bootstrap.Tooltip(el));
+    function citesteSuma() {
+      const t = $('suma').value.trim().replace(/\s/g, ''), cod = $('mon').value;
+      if (t === '') return { eroare: '' };
+      const s = Number(t.replace(',', '.'));
+      if (isNaN(s) || s <= 0) return { eroare: 'Introduceți o sumă pozitivă, de exemplu 100.' };
+      if (!Number.isInteger(s)) return { eroare: `Introduceți o sumă întreagă de ${cod}, fără zecimale.` };
+      if (s > MAX) return { eroare: `Suma maximă pentru o operațiune este ${fmt(MAX, 0)} ${cod}.` };
+      return { suma: s };
+    }
+    // Recalculam la fiecare modificare; butonul ramane inactiv cat timp datele nu sunt complete
+    function calcul() {
+      const cod = $('mon').value, vinde = document.querySelector('input[name=op]:checked').value === '1';
+      const rata = CURS[cod][vinde ? 2 : 1], r = citesteSuma(), lei = r.suma ? Math.round(r.suma * rata * 100) / 100 : 0;
+      $('cod').textContent = cod;
+      $('explicatie').textContent = vinde ? `Clientul dă lei și primește ${cod}. Se aplică cursul de vânzare.` : `Clientul dă ${cod} și primește lei. Se aplică cursul de cumpărare.`;
+      $('eticheta').textContent = vinde ? 'Clientul plătește' : 'Clientul primește';
+      $('cursAplicat').textContent = `Curs aplicat: 1 ${cod} = ${fmt(rata, 4)} lei`;
+      document.querySelectorAll('#cursuri tr').forEach(tr => { tr.classList.toggle('table-active', tr.dataset.cod === cod);
+        tr.querySelectorAll('td').forEach((td, i) => td.classList.toggle('curs-ales', tr.dataset.cod === cod && i === (vinde ? 1 : 0))); });
+      $('suma').classList.toggle('is-invalid', !!r.eroare); $('suma').setAttribute('aria-invalid', !!r.eroare); $('eroare').textContent = r.eroare || '';
+      $('total').textContent = r.suma ? fmt(lei) + ' lei' : '–';
+      const cuClient = lei > PRAG_CLIENT; $('blocClient').classList.toggle('d-none', !cuClient);
+      const lipsaClient = cuClient && $('client').value.trim().length < 3;
+      $('emite').disabled = !r.suma || lipsaClient;
+      $('emite').textContent = lipsaClient ? 'Completați numele clientului' : 'Emite chitanța…';
+      return r.suma && !lipsaClient ? { cod, vinde, rata, suma: r.suma, lei, client: cuClient ? $('client').value.trim() : '' } : null;
+    }
+    function textChitanta(o, nr) {
+      return `<div class="text-center fw-bold">CHITANȚĂ DE SCHIMB VALUTAR</div><div class="text-center mb-2">${nr ? 'nr. ' + nr + ' · ' : ''}${new Date().toLocaleString('ro-RO')}</div>
+        <div>Operațiune: ${o.vinde ? 'vânzare de valută către client' : 'cumpărare de valută de la client'}</div>${o.client ? `<div>Client: ${o.client}</div>` : ''}
+        <div>Suma: ${fmt(o.suma, 0)} ${o.cod}</div><div>Curs: ${fmt(o.rata, 4)} lei / ${o.cod}</div>
+        <div class="fw-bold mt-1">${o.vinde ? 'Încasat' : 'Plătit'}: ${fmt(o.lei)} lei</div><div class="small mt-2">Comision: 0,00 lei</div>`;
+    }
+    function afiseazaIstoric() {
+      const ist = citeste('istoric') || [];
+      $('istoric').innerHTML = ist.length ? ist.map(h => `<li class="d-flex justify-content-between border-bottom py-1"><span>nr. ${h.nr} · ${h.text}</span><span>${h.ora}</span></li>`).join('')
+        : '<li class="text-body-secondary">Nicio chitanță emisă încă.</li>';
+    }
+    // Pasul 1: verificare cu posibilitate de anulare; pasul 2: emiterea
+    $('f').addEventListener('submit', e => {
+      e.preventDefault(); op = calcul(); if (!op) return;
+      $('tM').textContent = 'Verificați operațiunea'; $('chitanta').innerHTML = textChitanta(op);
+      $('subsol').innerHTML = '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anulează, modific datele</button><button type="button" class="btn btn-primary" id="confirma">Confirmă și emite</button>';
+      $('confirma').onclick = emite; modal.show();
+    });
+    function emite() {
+      const nr = String((citeste('nr') || 124) + 1).padStart(6, '0'); scrie('nr', +nr);
+      const ist = [{ nr, text: `${op.vinde ? 'vânzare' : 'cumpărare'} ${fmt(op.suma, 0)} ${op.cod}`, ora: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }) }, ...(citeste('istoric') || [])].slice(0, 5);
+      scrie('istoric', ist); afiseazaIstoric();
+      $('tM').textContent = 'Chitanța a fost emisă'; $('chitanta').innerHTML = textChitanta(op, nr);
+      $('subsol').innerHTML = '<button type="button" class="btn btn-outline-secondary" onclick="window.print()">Tipărește</button><button type="button" class="btn btn-primary" data-bs-dismiss="modal">Gata</button>';
+      $('mesaj').innerHTML = `<div class="alert alert-success alert-dismissible">Chitanța nr. ${nr} a fost emisă. Puteți începe o operațiune nouă.<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Închide"></button></div>`;
+      $('suma').value = ''; $('client').value = ''; calcul();
+    }
+    $('modal').addEventListener('hidden.bs.modal', () => $('suma').focus());
+    ['suma', 'mon', 'client'].forEach(id => $(id).addEventListener('input', calcul));
+    document.querySelectorAll('input[name=op]').forEach(r => r.addEventListener('change', calcul));
+    $('rapide').onclick = e => { if (e.target.dataset.s) { $('suma').value = e.target.dataset.s; calcul(); $('suma').focus(); } };
+    $('goleste').onclick = () => { $('suma').value = ''; $('client').value = ''; $('mesaj').innerHTML = ''; calcul(); $('suma').focus(); };
+    afiseazaIstoric(); calcul();
+  </script>
+  <script src="../../assets/nivel.js" data-nivel="4"></script>
+</body>
+</html>

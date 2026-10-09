@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Priză programabilă</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .indicator { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; border: 4px solid #ced4da; color: #6c757d; transition: all .3s; }
+    .indicator.pornita { border-color: #198754; color: #198754; background: #d1e7dd; }
+    .form-switch .form-check-input { width: 3em; height: 1.5em; }
+    #zile { width: 100%; max-width: 440px; } #zile .btn { flex: 1 1 0; min-width: 0; padding-inline: 0; }
+  </style>
+</head>
+<body class="bg-body-tertiary">
+<div class="container py-4" style="max-width: 980px">
+  <header class="mb-4"><h1 class="h3 mb-1">Priza din birou</h1>
+    <p class="text-secondary mb-0">Priză inteligentă · aerotermă de 2 000 W</p></header>
+  <div id="mesaj"></div>
+  <div class="row g-4">
+    <div class="col-md-5">
+      <section class="card shadow-sm h-100"><div class="card-body text-center p-4">
+        <div id="indicator" class="indicator mx-auto mb-3"><svg viewBox="0 0 24 24" width="44" height="44" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></div>
+        <h2 class="h4" id="stareText">Priza este oprită</h2>
+        <div class="form-check form-switch d-inline-flex align-items-center gap-2 mt-2">
+          <input class="form-check-input" type="checkbox" role="switch" id="comutator">
+          <label class="form-check-label" for="comutator">Pornire / oprire manuală</label>
+        </div>
+        <p class="small text-secondary mt-3 mb-0" id="urmatoarea"></p>
+      </div></section>
+    </div>
+    <div class="col-md-7">
+      <section class="card shadow-sm"><div class="card-body p-4">
+        <h2 class="h5 mb-3">Program săptămânal</h2>
+        <form id="form" novalidate>
+          <div class="row g-3">
+            <div class="col-6"><label class="form-label" for="ora1">Pornire la</label>
+              <input type="time" class="form-control" id="ora1" value="07:00"></div>
+            <div class="col-6"><label class="form-label" for="ora2">Oprire la</label>
+              <input type="time" class="form-control" id="ora2" value="18:00">
+              <div class="invalid-feedback">Ora de oprire trebuie să fie după ora de pornire. Pentru un program peste noapte, adăugați două intervale.</div></div>
+          </div>
+          <p class="form-label mt-3 mb-2">Zilele</p>
+          <div class="btn-group" id="zile"></div>
+          <div class="mt-2 small">Alegere rapidă:
+            <button type="button" class="btn btn-link btn-sm p-0 mx-1" data-z="0,1,2,3,4">Luni–Vineri</button> ·
+            <button type="button" class="btn btn-link btn-sm p-0 mx-1" data-z="5,6">Weekend</button> ·
+            <button type="button" class="btn btn-link btn-sm p-0 mx-1" data-z="0,1,2,3,4,5,6">Zilnic</button></div>
+          <div class="text-danger small mt-1 d-none" id="eroareZile">Alegeți cel puțin o zi.</div>
+          <button class="btn btn-primary mt-3" data-bs-toggle="tooltip" data-bs-title="Priza va porni și se va opri singură, în zilele alese">Adaugă intervalul</button>
+        </form>
+        <hr>
+        <h3 class="h6">Intervale salvate</h3>
+        <ul class="list-group" id="lista"></ul>
+      </div></section>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const ZILE = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+  const SCURT = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sâ', 'Du'];
+  let pornita = false;
+  let intervale = [{ a: '07:30', b: '09:00', zile: [0, 1, 2, 3, 4] }];
+  const $ = id => document.getElementById(id);
+  // Butoanele pentru zile (Lu, Ma, ...), cu numele complet in tooltip
+  $('zile').innerHTML = SCURT.map((s, i) => `<input type="checkbox" class="btn-check" id="z${i}" value="${i}"${i < 5 ? ' checked' : ''}>
+    <label class="btn btn-outline-primary" for="z${i}" data-bs-toggle="tooltip" data-bs-title="${ZILE[i]}">${s}</label>`).join('');
+  // Tooltips Bootstrap (se initializeaza din JS, si dupa fiecare redesenare a listei)
+  const initTooltips = () => { document.querySelectorAll('.tooltip').forEach(t => t.remove());
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => bootstrap.Tooltip.getOrCreateInstance(el, { container: 'body' })); };
+  const anunta = (text, tip = 'success') => $('mesaj').innerHTML = `<div class="alert alert-${tip} alert-dismissible fade show"
+    role="alert">${text}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Închide"></button></div>`;
+  const minute = ora => ora.split(':').reduce((h, m) => h * 60 + Number(m), 0);
+  const ora = t => String(Math.floor(t % 1440 / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+  function acum() { const d = new Date(); return ((d.getDay() + 6) % 7) * 1440 + d.getHours() * 60 + d.getMinutes(); }
+  // Zilele consecutive se scriu ca interval (Luni-Vineri), celelalte se enumera
+  const textZile = z => z.length === 7 ? 'Zilnic' : z.length > 2 && z.every((d, i) => !i || d === z[i - 1] + 1)
+    ? ZILE[z[0]] + '–' + ZILE[z[z.length - 1]] : z.map(d => ZILE[d]).join(', ');
+  // Toate evenimentele programate (pornire/oprire), in minute de la inceputul saptamanii
+  const evenimente = () => intervale.flatMap(iv => iv.zile.flatMap(z =>
+    [{ t: z * 1440 + minute(iv.a), porneste: true }, { t: z * 1440 + minute(iv.b), porneste: false }]));
+  // Urmatorul eveniment programat (optional: doar porniri sau doar opriri)
+  function urmatorulEveniment(porneste) {
+    const t0 = acum();
+    const lista = evenimente().filter(ev => porneste === undefined || ev.porneste === porneste).map(ev => ({ ...ev, dif: (ev.t - t0 + 10080) % 10080 || 10080 }));
+    if (!lista.length) return null;
+    const best = lista.reduce((x, y) => (y.dif < x.dif ? y : x));
+    const peste = Math.floor((t0 % 1440 + best.dif) / 1440);
+    best.cand = (peste === 0 ? 'astăzi' : peste === 1 ? 'mâine' : ZILE[Math.floor(best.t / 1440)].toLowerCase()) + ' la ' + ora(best.t);
+    return best;
+  }
+  // Starea prizei si urmatoarea actiune programata (vizibilitatea starii sistemului)
+  function deseneazaStare() {
+    $('indicator').classList.toggle('pornita', pornita);
+    $('stareText').textContent = pornita ? 'Priza este pornită' : 'Priza este oprită';
+    $('comutator').checked = pornita;
+    const ev = urmatorulEveniment(!pornita);
+    $('urmatoarea').textContent = ev ? `Următoarea acțiune programată: ${ev.porneste ? 'pornire' : 'oprire'} ${ev.cand}.`
+      : 'Niciun interval programat: priza se comandă doar manual.';
+  }
+  function deseneazaLista() {
+    $('lista').innerHTML = intervale.length ? intervale.map((iv, i) => `<li class="list-group-item d-flex align-items-center gap-2">
+        <div class="me-auto"><strong>${textZile(iv.zile)}</strong><div class="small text-secondary">pornire ${iv.a} · oprire ${iv.b}</div></div>
+        <button class="btn btn-sm btn-outline-danger" data-i="${i}" data-bs-toggle="tooltip" data-bs-title="Șterge acest interval">Șterge</button></li>`).join('')
+      : '<li class="list-group-item text-secondary">Nu există încă niciun interval.</li>';
+    initTooltips();
+    deseneazaStare();
+  }
+  $('comutator').addEventListener('change', e => {
+    pornita = e.target.checked;
+    deseneazaStare();
+    const ev = urmatorulEveniment(!pornita);
+    anunta(`Priza a fost ${pornita ? 'pornită' : 'oprită'} manual și rămâne așa ` + (ev ? `până la următoarea ${pornita ? 'oprire' : 'pornire'} programată: ${ev.cand}.` : 'până o comandați din nou.'), 'info');
+  });
+  // Alegerea rapida a zilelor (Luni-Vineri, Weekend, Zilnic)
+  document.querySelectorAll('[data-z]').forEach(b => b.onclick = () =>
+    document.querySelectorAll('#zile input').forEach(c => c.checked = b.dataset.z.split(',').includes(c.value)));
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    const a = $('ora1').value, b = $('ora2').value;
+    const zile = [...document.querySelectorAll('#zile input:checked')].map(c => Number(c.value));
+    const oreBune = a && b && minute(b) > minute(a);
+    $('ora2').classList.toggle('is-invalid', !oreBune);
+    $('eroareZile').classList.toggle('d-none', zile.length > 0);
+    if (!oreBune || !zile.length) return anunta('Intervalul nu a fost adăugat. Corectați câmpurile marcate cu roșu.', 'danger');
+    intervale.push({ a, b, zile });
+    deseneazaLista();
+    anunta(`Interval adăugat: ${textZile(zile)}, ${a}–${b}.`);
+  });
+  $('lista').addEventListener('click', e => {
+    const i = e.target.dataset.i;
+    if (i === undefined || !confirm('Ștergeți intervalul ' + textZile(intervale[i].zile) + ', ' + intervale[i].a + '–' + intervale[i].b + '?')) return;
+    intervale.splice(i, 1);
+    deseneazaLista();
+    anunta('Intervalul a fost șters.', 'secondary');
+  });
+  // Aplica programul la ora fiecarui eveniment si anunta schimbarea
+  setInterval(() => {
+    const ev = evenimente().find(e => e.t === acum());
+    if (ev && pornita !== ev.porneste) { pornita = ev.porneste; anunta(`Programul a ${pornita ? 'pornit' : 'oprit'} priza la ${ora(ev.t)}.`, 'info'); }
+    deseneazaStare();
+  }, 20000);
+  deseneazaLista();
+</script>
+<script src="../../assets/nivel.js" data-nivel="3"></script>
+</body>
+</html>

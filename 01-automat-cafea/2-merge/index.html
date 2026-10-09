@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Automat de cafea</title>
+<style>
+  body { font-family: Verdana, sans-serif; font-size: 14px; background: #fafafa; }
+  table.aparat { width: 900px; border: 1px solid #999; background: #fff; }
+  td { vertical-align: top; padding: 12px; }
+  h2 { font-size: 18px; }
+  .bauturi button { display: block; width: 260px; margin: 6px 0; padding: 8px; text-align: left; }
+  #comanda { background: #e53935; color: #fff; border: 0; padding: 10px 26px; font-weight: bold; }
+  #renunta { background: #43a047; color: #fff; border: 0; padding: 10px 26px; }
+  #info { color: #777; font-size: 12px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<h2>AUTOMAT CAFEA</h2>
+<table class="aparat">
+  <tr>
+    <td class="bauturi">
+      <b>Produse</b>
+      <button onclick="alege(0)">Espresso - 5 lei</button>
+      <button onclick="alege(1)">Cafea lunga - 5 lei</button>
+      <button onclick="alege(2)">Cappuccino - 7 lei</button>
+      <button onclick="alege(3)">Latte - 8 lei</button>
+      <button onclick="alege(4)">Ciocolata - 7 lei</button>
+      <button onclick="alege(5)">Ceai - 4 lei</button>
+    </td>
+    <td>
+      <p>Zahăr: <select id="zahar">
+        <option>0</option><option>1</option><option>2</option>
+        <option selected>3</option><option>4</option><option>5</option>
+      </select></p>
+      <p>Payment method:<br>
+        <input type="radio" name="plata" value="card" checked> Card
+        <input type="radio" name="plata" value="cash"> Cash
+      </p>
+      <p>Suma introdusa: <input id="suma" size="6"></p>
+      <button id="comanda" onclick="comanda()">COMANDĂ</button>
+      <button id="renunta" onclick="renunta()">Renunță</button>
+    </td>
+  </tr>
+</table>
+<p id="info">Produs: -</p>
+
+<script>
+  // lista produselor (nume, pret)
+  var produse = [
+    ['Espresso', 5], ['Cafea lunga', 5], ['Cappuccino', 7],
+    ['Latte', 8], ['Ciocolata', 7], ['Ceai', 4]
+  ];
+  var ales = -1;
+
+  function alege(i) {
+    ales = i;
+    document.getElementById('info').textContent = 'Produs: ' + i;
+  }
+
+  function comanda() {
+    if (ales < 0) { alert('Error: no product'); return; }
+    var plata = document.querySelector('input[name=plata]:checked').value;
+    var pret = produse[ales][1];
+    if (plata === 'cash') {
+      var suma = parseFloat(document.getElementById('suma').value);
+      if (isNaN(suma)) { alert('Invalid input'); return; }
+      if (suma < pret) { alert('Error: insufficient credit'); return; }
+      alert('Comanda a fost procesata. Rest: ' + (suma - pret));
+    } else {
+      alert('Done.');
+    }
+    ales = -1;
+    document.getElementById('suma').value = '';
+    document.getElementById('info').textContent = 'Produs: -';
+  }
+
+  function renunta() {
+    ales = -1;
+    document.getElementById('info').textContent = 'Produs: -';
+  }
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>

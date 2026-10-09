@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Meniu restaurant</title>
+<style>
+  body { font-family: "Trebuchet MS", sans-serif; background: #f3ede4; margin: 0; color: #333; }
+  .pagina { width: 960px; margin: 0 auto; display: flex; gap: 20px; padding: 20px; }
+  .meniu { width: 620px; } .cos { width: 300px; background: #fff; padding: 14px; align-self: flex-start; }
+  h1 { color: #8d3b12; margin: 0 0 6px; }
+  .urgenta { background: #d32f2f; color: #fff; padding: 8px; font-weight: bold; text-align: center; }
+  .produs { background: #fff; margin: 8px 0; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .produs small { color: #888; display: block; }
+  .ramase { color: #d32f2f; font-size: 12px; font-weight: bold; }
+  .adauga { background: #ef6c00; color: #fff; border: 0; padding: 6px 12px; }
+  .comanda { background: #2e7d32; color: #fff; border: 0; padding: 10px; width: 100%; font-size: 16px; }
+  .cos input[type=text] { width: 95%; margin-bottom: 6px; }
+  .rand { display: flex; justify-content: space-between; font-size: 14px; margin: 4px 0; }
+  #popup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); }
+  #popup > div { width: 380px; margin: 140px auto; background: #fff; padding: 24px; text-align: center; }
+  #popup .da { background: #2e7d32; color: #fff; border: 0; padding: 12px 24px; font-size: 18px; }
+  #popup a { display: block; margin-top: 14px; color: #aaa; font-size: 12px; }
+  #rezumat { display: none; border-top: 2px dashed #ccc; margin-top: 10px; padding-top: 10px; }
+</style>
+</head>
+<body>
+<div class="urgenta">Ofertă valabilă doar azi! Mai ai <span id="timer">09:59</span></div>
+<div class="pagina">
+  <div class="meniu"><h1>Bistro Campus</h1><div id="produse"></div></div>
+  <div class="cos">
+    <h3>Coșul tău</h3>
+    <div id="cos">Coșul este gol.</div>
+    <div class="rand"><b>Subtotal</b><b id="subtotal">0 lei</b></div>
+    <label><input type="checkbox" id="tacamuri" checked> Tacâmuri (+2,00 lei)</label><br>
+    <label><input type="checkbox" checked> Vreau oferte prin SMS și e-mail</label><br>
+    Bacșiș curier: <select id="bacsis"><option value="0">0%</option><option value="0.05">5%</option><option value="0.1" selected>10%</option></select>
+    <p><input type="text" id="nume" placeholder="Nume"><input type="text" id="tel" placeholder="Telefon"><input type="text" id="adresa" placeholder="Adresa"></p>
+    <button class="comanda" id="comanda">Comandă</button>
+    <div id="rezumat"></div>
+  </div>
+</div>
+<div id="popup"><div>
+  <h3>Nu pleca fără desert!</h3><p>Adaugă papanași cu 20% reducere.</p>
+  <button class="da" id="da">Da, adaugă!</button><a href="#" id="nu">Nu, mulțumesc, nu vreau reduceri</a>
+</div></div>
+
+<script>
+  const MENIU = [
+    { id: 1, nume: 'Ciorbă de burtă', desc: 'cu smântână și ardei iute', pret: 24 },
+    { id: 2, nume: 'Supă cremă de linte', desc: 'cu crutoane', pret: 19 },
+    { id: 3, nume: 'Sarmale cu mămăliguță', desc: '4 bucăți, cu smântână', pret: 38 },
+    { id: 4, nume: 'Piept de pui la grătar', desc: 'cu legume coapte', pret: 36 },
+    { id: 5, nume: 'Papanași', desc: 'cu dulceață de afine', pret: 26, ramase: 2 },
+    { id: 6, nume: 'Limonadă cu mentă', desc: '400 ml', pret: 14 },
+  ];
+  const cos = {};
+  const $ = id => document.getElementById(id);
+
+  $('produse').innerHTML = MENIU.map(p => '<div class="produs"><div><b>' + p.nume + '</b><small>' + p.desc + '</small>' +
+    (p.ramase ? '<span class="ramase">Doar ' + p.ramase + ' porții rămase!</span>' : '') + '</div><div>' + p.pret +
+    ' lei <button class="adauga" data-id="' + p.id + '">Adaugă</button></div></div>').join('');
+
+  function subtotal() { return MENIU.reduce((s, p) => s + (cos[p.id] || 0) * p.pret, 0); }
+  function afiseazaCos() {
+    const linii = MENIU.filter(p => cos[p.id]).map(p => '<div class="rand"><span>' + cos[p.id] + ' x ' + p.nume +
+      '</span><a href="#" data-sterge="' + p.id + '">x</a></div>');
+    $('cos').innerHTML = linii.length ? linii.join('') : 'Coșul este gol.';
+    $('subtotal').textContent = subtotal() + ' lei';
+  }
+  document.querySelectorAll('.adauga').forEach(b => b.onclick = () => { cos[b.dataset.id] = (cos[b.dataset.id] || 0) + 1; afiseazaCos(); });
+  $('cos').onclick = e => { if (e.target.dataset.sterge) { e.preventDefault(); delete cos[e.target.dataset.sterge]; afiseazaCos(); } };
+
+  $('comanda').onclick = () => {
+    if (!subtotal() || !$('nume').value || !$('tel').value || !$('adresa').value) { alert('Date invalide'); return; }
+    $('popup').style.display = 'block';
+  };
+  // Taxa de ambalare apare abia in rezumatul final
+  function rezumat() {
+    $('popup').style.display = 'none';
+    const s = subtotal(), tac = $('tacamuri').checked ? 2 : 0, bac = s * Number($('bacsis').value), taxa = 7.99;
+    $('rezumat').innerHTML = '<div class="rand"><span>Subtotal</span><span>' + s.toFixed(2) + '</span></div>' +
+      '<div class="rand"><span>Tacâmuri</span><span>' + tac.toFixed(2) + '</span></div>' +
+      '<div class="rand"><span>Bacșiș</span><span>' + bac.toFixed(2) + '</span></div>' +
+      '<div class="rand"><span>Taxă ambalare și servire</span><span>' + taxa.toFixed(2) + '</span></div>' +
+      '<div class="rand"><b>TOTAL</b><b>' + (s + tac + bac + taxa).toFixed(2) + ' lei</b></div>' +
+      '<button class="comanda" id="confirma">Confirmă</button>';
+    $('rezumat').style.display = 'block';
+    $('confirma').onclick = () => alert('Comanda a fost trimisă!');
+  }
+  $('da').onclick = () => { cos[5] = (cos[5] || 0) + 1; afiseazaCos(); rezumat(); };
+  $('nu').onclick = e => { e.preventDefault(); rezumat(); };
+
+  // Numaratoarea inversa reincepe la fiecare vizita
+  let secunde = 599;
+  setInterval(() => { secunde = secunde > 0 ? secunde - 1 : 599;
+    $('timer').textContent = String(Math.floor(secunde / 60)).padStart(2, '0') + ':' + String(secunde % 60).padStart(2, '0'); }, 1000);
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Listă de sarcini</title>
+<style>
+  body { font-family: Tahoma, sans-serif; font-size: 14px; background: #fafafa; }
+  .pagina { width: 720px; margin: 30px auto; }
+  h1 { font-size: 24px; color: #6a1b9a; }
+  #text { width: 400px; padding: 5px; }
+  .add { background: #8e24aa; color: #fff; border: 0; padding: 6px 16px; }
+  .clear { background: #fff; border: 1px solid #999; padding: 4px 10px; float: right; }
+  .filtre a { color: #555; margin-right: 8px; }
+  ul { list-style: none; padding: 0; }
+  li { padding: 6px; border-bottom: 1px solid #eee; }
+  li.gata span { text-decoration: line-through; color: #aaa; }
+  .x { background: #e53935; color: #fff; border: 0; font-size: 11px; float: right; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <h1>Lista mea de sarcini</h1>
+  Sarcina nouă: <input id="text"> <button class="add" id="add">Add</button>
+  <p class="filtre">
+    <a href="#" data-f="toate">Toate</a> | <a href="#" data-f="active">Active</a> | <a href="#" data-f="completed">Completed</a>
+    <button class="clear" id="clear">Șterge finalizate</button>
+  </p>
+  <ul id="lista"></ul>
+</div>
+
+<script>
+  let sarcini = [
+    { id: 1, text: 'Citesc prezentarea de la cursul 9', gata: false },
+    { id: 2, text: 'Completez chestionarul SUS', gata: true },
+    { id: 3, text: 'Trimit tema de laborator', gata: false },
+  ];
+  let filtru = 'toate';
+  let urmatorulId = 4;
+
+  function afiseaza() {
+    const vizibile = sarcini.filter(s => filtru === 'toate' || (filtru === 'active' ? !s.gata : s.gata));
+    document.getElementById('lista').innerHTML = vizibile.map(s =>
+      '<li class="' + (s.gata ? 'gata' : '') + '"><input type="checkbox" data-id="' + s.id + '"' + (s.gata ? ' checked' : '') +
+      '> <span>' + s.text + '</span><button class="x" data-id="' + s.id + '">X</button></li>').join('');
+  }
+
+  document.getElementById('add').onclick = function () {
+    const text = document.getElementById('text').value.trim();
+    if (text === '') { alert('Error: empty string'); return; }
+    sarcini.push({ id: urmatorulId++, text: text, gata: false });
+    document.getElementById('text').value = '';
+    afiseaza();
+  };
+
+  // Bifare si stergere (fara confirmare)
+  document.getElementById('lista').onclick = function (e) {
+    const id = Number(e.target.dataset.id);
+    if (e.target.type === 'checkbox') sarcini.find(s => s.id === id).gata = e.target.checked;
+    if (e.target.classList.contains('x')) sarcini = sarcini.filter(s => s.id !== id);
+    afiseaza();
+  };
+
+  // Filtrele nu arata care este cel activ
+  document.querySelectorAll('.filtre a').forEach(a => a.onclick = function (e) {
+    e.preventDefault();
+    filtru = a.dataset.f;
+    afiseaza();
+  });
+
+  document.getElementById('clear').onclick = function () {
+    sarcini = sarcini.filter(s => !s.gata);
+    afiseaza();
+    alert('OK');
+  };
+
+  afiseaza();
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>

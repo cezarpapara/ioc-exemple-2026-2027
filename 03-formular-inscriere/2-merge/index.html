@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Înscriere atelier</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 14px; background: #f3f3f3; }
+  .cutie { width: 700px; margin: 20px auto; background: #fff; padding: 20px; border: 1px solid #ccc; }
+  h1 { font-size: 20px; }
+  td { padding: 6px; }
+  td:first-child { width: 180px; text-align: right; }
+  input[type=text], select, textarea { width: 300px; }
+  .req { color: red; }
+  button { padding: 6px 18px; }
+</style>
+</head>
+<body>
+<div class="cutie">
+  <h1>Formular de inscriere - Atelier de prototipare</h1>
+  <p>Completati toate campurile.</p>
+  <form id="f" onsubmit="return trimite()">
+    <table>
+      <tr><td><label>Nume complet <span class="req">*</span></label></td><td><input type="text" id="nume"></td></tr>
+      <tr><td><label>E-mail</label></td><td><input type="text" id="email"></td></tr>
+      <tr><td><label>Telefon *</label></td><td><input type="text" id="tel"></td></tr>
+      <tr><td><label>Specializarea</label></td><td>
+        <select id="spec"><option value="">--</option><option>Informatică</option><option>Tehnologia informației</option><option>Alta</option></select></td></tr>
+      <tr><td><label>Anul</label></td><td>
+        <select id="an"><option value="">--</option><option>1</option><option>2</option><option>3</option><option>4</option></select></td></tr>
+      <tr><td><label>Sesiunea</label></td><td>
+        <input type="radio" name="ses" value="dim"> Dimineata 9-12
+        <input type="radio" name="ses" value="dupa"> Dupa-amiaza 14-17</td></tr>
+      <tr><td><label>Observatii</label></td><td><textarea id="obs" rows="3"></textarea></td></tr>
+      <tr><td></td><td><input type="checkbox" id="acord"> Sunt de acord cu prelucrarea datelor</td></tr>
+      <tr><td></td><td><button type="submit">Submit</button> <button type="reset">Reset</button></td></tr>
+    </table>
+  </form>
+</div>
+
+<script>
+  // validarea se face pe rand, cu alert
+  function trimite() {
+    var v = function (id) { return document.getElementById(id).value.trim(); };
+    if (v('nume') === '') { alert('Required field: nume'); return false; }
+    if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v('email'))) { alert("Field 'email' is invalid"); return false; }
+    if (!/^07\d{8}$/.test(v('tel'))) { alert('Error 42: phone format'); return false; }
+    if (v('spec') === '' || v('an') === '') { alert('Invalid input'); return false; }
+    var ses = document.querySelector('input[name=ses]:checked');
+    if (!ses) { alert('Required: sesiune'); return false; }
+    if (ses.value === 'dupa') { alert('Session full'); return false; }
+    if (!document.getElementById('acord').checked) { alert('Required: acord'); return false; }
+    alert('Success!');
+    return false;
+  }
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>

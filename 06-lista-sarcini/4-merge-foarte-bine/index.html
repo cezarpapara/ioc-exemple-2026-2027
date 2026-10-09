@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Listă de sarcini</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .gata .form-check-label { text-decoration: line-through; color: var(--bs-secondary-color); }
+    .list-group-item { transition: background-color .25s; }
+    .list-group-item.nou { background: var(--bs-success-bg-subtle); }
+    .form-check-input { width: 1.3em; height: 1.3em; }
+    .sarcina { flex: 1 1 240px; min-width: 0; }
+    :focus-visible { outline: 3px solid #f0b429 !important; outline-offset: 2px; }
+    /* In modul intunecat, culori mai deschise pentru butoanele contur (contrast WCAG AA) */
+    [data-bs-theme=dark] .btn-outline-primary { --bs-btn-color: #6ea8fe; --bs-btn-border-color: #6ea8fe; }
+    [data-bs-theme=dark] .btn-outline-secondary { --bs-btn-color: #ced4da; --bs-btn-border-color: #adb5bd; }
+    [data-bs-theme=dark] .btn-outline-danger { --bs-btn-color: #f1aeb5; --bs-btn-border-color: #ea868f; }
+  </style>
+</head>
+<body class="bg-body-tertiary">
+<main class="container py-4" style="max-width: 680px">
+  <header class="d-flex align-items-start gap-2 mb-3">
+    <div class="me-auto"><h1 class="h3 mb-1">Sarcinile mele</h1><p class="text-body-secondary mb-0" id="rezumat"></p></div>
+    <button class="btn btn-sm btn-outline-secondary" id="tema" aria-pressed="false">Mod întunecat</button>
+  </header>
+  <div id="mesaj" role="status" aria-live="polite"></div>
+  <form id="form" class="card card-body shadow-sm mb-3" novalidate>
+    <label class="form-label fw-semibold" for="text">Sarcină nouă</label>
+    <div class="row g-2">
+      <div class="col-sm"><input class="form-control" id="text" maxlength="80" autocomplete="off" aria-describedby="ajutor eroare"
+        placeholder="de exemplu: Citesc cursul 9"><div class="invalid-feedback" id="eroare"></div></div>
+      <div class="col-7 col-sm-auto"><select class="form-select" id="prioritate" aria-label="Prioritate" data-bs-toggle="tooltip" data-bs-title="Prioritatea sarcinii">
+        <option value="normal">Normală</option><option value="mare">Importantă</option></select></div>
+      <div class="col-5 col-sm-auto d-grid"><button class="btn btn-primary">Adaugă</button></div>
+    </div>
+    <div class="form-text" id="ajutor"><span id="contor">0/80</span> caractere · Enter adaugă, Esc golește câmpul · tasta <kbd>/</kbd> vă aduce aici</div>
+  </form>
+  <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+    <div class="btn-group btn-group-sm" id="filtre" role="group" aria-label="Filtrează sarcinile">
+      <button class="btn btn-outline-primary" data-f="toate"></button><button class="btn btn-outline-primary" data-f="active"></button>
+      <button class="btn btn-outline-primary" data-f="gata"></button></div>
+    <button class="btn btn-sm btn-outline-danger ms-auto" id="curata" data-bs-toggle="tooltip" data-bs-title="Elimină sarcinile bifate (puteți anula imediat după)">Șterge finalizatele</button>
+  </div>
+  <ul class="list-group shadow-sm" id="lista" aria-label="Lista de sarcini"></ul>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const citeste = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const scrie = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignorat */ } };
+  let sarcini = citeste('sarcini-ex06', [
+    { id: 1, text: 'Citesc prezentarea de la cursul 9', gata: false, prioritate: 'mare' },
+    { id: 2, text: 'Completez chestionarul SUS', gata: true, prioritate: 'normal' },
+    { id: 3, text: 'Trimit tema de laborator', gata: false, prioritate: 'normal' }]);
+  let filtru = citeste('filtru-ex06', 'toate'), copie = null, editat = null, nou = null;
+  const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // Acordul numeralului in romana: 1 sarcina, 5 sarcini, 20 de sarcini
+  const nr = (n, sg, pl) => n === 1 ? 'o ' + sg : n + (n % 100 >= 20 || n % 100 === 0 && n ? ' de ' : ' ') + pl;
+  const GOL = { toate: 'Lista este goală. Adăugați prima sarcină folosind formularul de mai sus.',
+    active: 'Nu aveți sarcini active. Bravo!', gata: 'Nu aveți încă sarcini finalizate. Bifați o sarcină când o terminați.' };
+  function aplicaTema(t) { document.documentElement.dataset.bsTheme = t; $('tema').textContent = t === 'dark' ? 'Mod luminos' : 'Mod întunecat'; $('tema').setAttribute('aria-pressed', t === 'dark'); }
+  aplicaTema(citeste('tema', matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  $('tema').onclick = () => { const t = document.documentElement.dataset.bsTheme === 'dark' ? 'light' : 'dark'; aplicaTema(t); scrie('tema', t); };
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+  // Mesaj in zona aria-live; pentru stergeri ofera butonul Anuleaza (in loc de confirmare)
+  function anunta(text, tip = 'success', anulare = false) {
+    $('mesaj').innerHTML = `<div class="alert alert-${tip} d-flex align-items-center gap-2 py-2"><span class="me-auto">${text}</span>
+      ${anulare ? '<button class="btn btn-sm btn-primary" id="anuleaza">Anulează</button>' : ''}<button class="btn-close" aria-label="Închide mesajul"></button></div>`;
+    $('mesaj').querySelector('.btn-close').onclick = () => $('mesaj').innerHTML = '';
+    if (anulare) $('anuleaza').onclick = () => { sarcini = copie; afiseaza(); anunta('Ștergerea a fost anulată.'); $('text').focus(); };
+  }
+  function afiseaza() {
+    scrie('sarcini-ex06', sarcini); scrie('filtru-ex06', filtru);
+    const active = sarcini.filter(s => !s.gata).length, gata = sarcini.length - active;
+    $('rezumat').textContent = sarcini.length ? `${active} active, ${gata} finalizate` : 'Nicio sarcină încă';
+    [...$('filtre').children].forEach((b, i) => { b.textContent = ['Toate', 'Active', 'Finalizate'][i] + ` (${[sarcini.length, active, gata][i]})`;
+      b.classList.toggle('active', b.dataset.f === filtru); b.setAttribute('aria-pressed', b.dataset.f === filtru); });
+    $('curata').disabled = gata === 0;
+    const vizibile = sarcini.filter(s => filtru === 'toate' || (filtru === 'gata') === s.gata);
+    $('lista').innerHTML = vizibile.length ? vizibile.map(s => `
+      <li class="list-group-item d-flex flex-wrap align-items-center gap-2 py-2 ${s.gata ? 'gata' : ''} ${s.id === nou ? 'nou' : ''}" data-id="${s.id}">
+        ${s.id === editat ? `<input class="form-control form-control-sm sarcina" id="editare" maxlength="80" value="${esc(s.text)}" aria-label="Textul sarcinii (Enter salvează, Esc renunță)">`
+        : `<div class="form-check sarcina mb-0"><input class="form-check-input" type="checkbox" id="s${s.id}" ${s.gata ? 'checked' : ''}>
+          <label class="form-check-label ms-1" for="s${s.id}">${esc(s.text)}</label></div>`}
+        <div class="ms-auto d-flex align-items-center gap-2">${s.prioritate === 'mare' ? '<span class="badge text-bg-warning">Importantă</span>' : ''}
+        <button class="btn btn-sm btn-outline-secondary" data-act="editeaza" aria-label="Editează „${esc(s.text)}”">Editează</button>
+        <button class="btn btn-sm btn-outline-danger" data-act="sterge" aria-label="Șterge „${esc(s.text)}”">Șterge</button></div>
+      </li>`).join('') : `<li class="list-group-item text-body-secondary text-center py-4">${GOL[filtru]}</li>`;
+    nou = null;
+    if (editat) { $('editare').focus(); $('editare').select(); }
+  }
+  function eroare(text) { $('eroare').textContent = text; $('text').classList.toggle('is-invalid', !!text); return !text; }
+  $('text').addEventListener('input', () => { $('contor').textContent = $('text').value.length + '/80'; eroare(''); });
+  $('text').addEventListener('keydown', e => { if (e.key === 'Escape') { $('text').value = ''; $('contor').textContent = '0/80'; eroare(''); } });
+  document.addEventListener('keydown', e => { if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); $('text').focus(); } });
+  $('form').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('text').value.trim().replace(/\s+/g, ' ');
+    const dublura = sarcini.some(s => s.text.toLowerCase() === text.toLowerCase());
+    if (!eroare(text.length < 3 ? 'Scrieți sarcina (cel puțin 3 caractere).' : dublura ? 'Această sarcină există deja în listă.' : '')) return $('text').focus();
+    nou = Date.now();
+    sarcini.unshift({ id: nou, text, gata: false, prioritate: $('prioritate').value });
+    if (filtru === 'gata') filtru = 'toate';
+    $('text').value = ''; $('contor').textContent = '0/80'; $('prioritate').value = 'normal';
+    afiseaza(); anunta(`Sarcina „${esc(text)}” a fost adăugată.`); $('text').focus();
+  });
+  $('lista').addEventListener('change', e => {
+    if (e.target.type !== 'checkbox') return;
+    const s = sarcini.find(x => x.id === Number(e.target.closest('li').dataset.id));
+    s.gata = e.target.checked; afiseaza();
+    anunta(s.gata ? `Ați finalizat „${esc(s.text)}”.` : `„${esc(s.text)}” este din nou activă.`, 'info');
+    document.getElementById('s' + s.id)?.focus();
+  });
+  $('lista').addEventListener('click', e => {
+    const li = e.target.closest('li'), act = e.target.dataset.act;
+    if (!li || !act) return;
+    const id = Number(li.dataset.id), s = sarcini.find(x => x.id === id);
+    if (act === 'editeaza') { editat = id; return afiseaza(); }
+    const urm = li.nextElementSibling || li.previousElementSibling;
+    copie = sarcini.slice(); sarcini = sarcini.filter(x => x.id !== id); afiseaza();
+    anunta(`Sarcina „${esc(s.text)}” a fost ștearsă.`, 'secondary', true);
+    (urm && document.querySelector(`[data-id="${urm.dataset.id}"] input`) || $('text')).focus();
+  });
+  // Editare pe loc: Enter salveaza, Esc renunta
+  $('lista').addEventListener('keydown', e => {
+    if (e.target.id !== 'editare' || !['Enter', 'Escape'].includes(e.key)) return;
+    const s = sarcini.find(x => x.id === editat), text = e.target.value.trim();
+    if (e.key === 'Enter' && text.length >= 3) { s.text = text; anunta('Sarcina a fost modificată.'); }
+    else if (e.key === 'Enter') return anunta('Textul trebuie să aibă cel puțin 3 caractere.', 'danger');
+    editat = null; afiseaza(); $('s' + s.id).focus();
+  });
+  $('filtre').addEventListener('click', e => { if (e.target.dataset.f) { filtru = e.target.dataset.f; afiseaza(); } });
+  $('curata').addEventListener('click', () => {
+    const n = sarcini.filter(s => s.gata).length;
+    copie = sarcini.slice(); sarcini = sarcini.filter(s => !s.gata); afiseaza();
+    anunta(`Am șters ${nr(n, 'sarcină finalizată', 'sarcini finalizate')}.`, 'secondary', true);
+  });
+  afiseaza();
+</script>
+<script src="../../assets/nivel.js" data-nivel="4"></script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Înscriere atelier</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: var(--bs-tertiary-bg); padding-bottom: 90px; }
+    .antet { background: linear-gradient(135deg, #1f3c88, #2a6f97); color: #fff; }
+    .obl { color: #b42318; } [data-bs-theme="dark"] .obl { color: #f59e94; } [data-bs-theme="dark"] .btn-outline-secondary { --bs-btn-color: #c5ccd3; --bs-btn-border-color: #8a939b; }
+    :focus-visible { outline: 3px solid #e3a008 !important; outline-offset: 2px; }
+    #sumar a { color: inherit; }
+  </style>
+</head>
+<body>
+  <header class="antet py-4 mb-4"><div class="container d-flex flex-wrap gap-3 align-items-start">
+    <div class="me-auto"><p class="mb-1 text-uppercase small opacity-75">Înscriere</p>
+      <h1 class="h3 mb-1">Atelier practic: prototiparea interfețelor</h1>
+      <p class="mb-0 opacity-75">Sâmbătă, 14 noiembrie 2026 · laboratorul de informatică · participare gratuită</p></div>
+    <button id="tema" class="btn btn-sm btn-outline-light text-nowrap" aria-pressed="false" title="Comută între modul luminos și cel întunecat">Mod întunecat</button></div></header>
+  <main class="container" style="max-width: 820px">
+    <div id="succes" class="d-none" tabindex="-1"></div>
+    <div class="card border-0 shadow-sm"><div class="card-body p-4">
+      <div id="sumar" class="alert alert-danger d-none" role="alert" tabindex="-1"></div>
+      <div id="info" class="alert alert-info d-none" role="status"></div>
+      <form id="f" novalidate>
+        <p class="small text-body-secondary">Câmpurile marcate cu <span class="obl" aria-hidden="true">*</span> sunt obligatorii. Datele se păstrează automat în acest browser până la trimitere.</p>
+        <div class="row g-3">
+          <div class="col-12"><label for="nume" class="form-label">Numele și prenumele <span class="obl" aria-hidden="true">*</span></label>
+            <input id="nume" class="form-control" autocomplete="name" required aria-describedby="e-nume"><div id="e-nume" class="invalid-feedback"></div></div>
+          <div class="col-md-6"><label for="email" class="form-label">Adresa de e-mail <span class="obl" aria-hidden="true">*</span></label>
+            <input id="email" type="email" class="form-control" autocomplete="email" required aria-describedby="e-email h-email">
+            <div id="e-email" class="invalid-feedback"></div><div id="h-email" class="form-text">Aici primiți confirmarea.</div><div id="sugestie"></div></div>
+          <div class="col-md-6"><label for="tel" class="form-label">Telefon <span class="text-body-secondary">(opțional)</span></label>
+            <input id="tel" type="tel" class="form-control" inputmode="tel" autocomplete="tel" aria-describedby="e-tel h-tel">
+            <div id="e-tel" class="invalid-feedback"></div><div id="h-tel" class="form-text">Doar dacă atelierul se amână în ultima zi. Spațiile sunt permise.</div></div>
+          <div class="col-md-8"><label for="spec" class="form-label">Specializarea <span class="obl" aria-hidden="true">*</span></label>
+            <select id="spec" class="form-select" required aria-describedby="e-spec"><option value="">Alegeți…</option><option>Informatică</option><option>Tehnologia informației</option><option>Altă specializare</option></select>
+            <div id="e-spec" class="invalid-feedback"></div></div>
+          <div class="col-md-4"><label for="an" class="form-label">Anul de studiu <span class="obl" aria-hidden="true">*</span></label>
+            <select id="an" class="form-select" required aria-describedby="e-an"><option value="">Alegeți…</option><option>I</option><option>II</option><option>III</option><option>IV</option></select>
+            <div id="e-an" class="invalid-feedback"></div></div>
+          <fieldset class="col-12"><legend class="form-label fs-6 mb-1">Sesiunea <span class="obl" aria-hidden="true">*</span></legend>
+            <div id="sesiuni"></div></fieldset>
+          <div class="col-12"><label for="obs" class="form-label">Observații <span class="text-body-secondary">(opțional)</span></label>
+            <textarea id="obs" class="form-control" rows="3" maxlength="300" aria-describedby="contor"></textarea>
+            <div id="contor" class="form-text text-end" aria-live="polite">0 / 300 caractere</div></div>
+          <div class="col-12"><div class="form-check"><input id="acord" type="checkbox" class="form-check-input" required aria-describedby="e-acord">
+            <label for="acord" class="form-check-label">Sunt de acord ca datele să fie folosite doar pentru organizarea atelierului. <span class="obl" aria-hidden="true">*</span></label>
+            <div id="e-acord" class="invalid-feedback"></div></div></div>
+        </div>
+        <div class="d-flex flex-wrap gap-3 align-items-center mt-4">
+          <button id="trimite" class="btn btn-primary btn-lg px-4">Trimite înscrierea</button>
+          <button type="button" id="goleste" class="btn btn-link text-body-secondary">Golește formularul</button>
+          <span id="ciorna" class="small text-body-secondary ms-auto" aria-live="polite"></span>
+        </div>
+      </form>
+    </div></div>
+  </main>
+  <div class="modal fade" id="confirmare" tabindex="-1" aria-labelledby="tc" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><h2 class="modal-title h5" id="tc">Goliți formularul?</h2><button class="btn-close" data-bs-dismiss="modal" aria-label="Închide"></button></div>
+    <div class="modal-body">Toate datele completate se șterg, inclusiv ciorna salvată. Operația nu poate fi anulată.</div>
+    <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Nu, păstrez datele</button><button id="daGoleste" class="btn btn-danger">Da, golește</button></div></div></div></div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const SESIUNI = [{ id: 'dim', nume: 'Dimineața, 9:00–12:00', libere: 4 }, { id: 'dupa', nume: 'După-amiaza, 14:00–17:00', libere: 0 }];
+    const CAMPURI = ['nume', 'email', 'tel', 'spec', 'an', 'obs'];
+    const GRESELI = { 'gmial.com': 'gmail.com', 'gmai.com': 'gmail.com', 'gmail.co': 'gmail.com', 'yahooo.com': 'yahoo.com', 'yaho.com': 'yahoo.com' };
+    const $ = id => document.getElementById(id);
+    const citeste = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } };
+    const scrie = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    const modal = new bootstrap.Modal($('confirmare'));
+    function seteazaTema(t) { document.documentElement.dataset.bsTheme = t; scrie('tema', t); $('tema').setAttribute('aria-pressed', t === 'dark');
+      $('tema').textContent = t === 'dark' ? 'Mod luminos' : 'Mod întunecat'; }
+    seteazaTema(citeste('tema') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    $('tema').onclick = () => seteazaTema(document.documentElement.dataset.bsTheme === 'dark' ? 'light' : 'dark');
+    // Sesiunea plina este dezactivata si explicata in text, nu doar prin culoare
+    SESIUNI.forEach((s, i) => $('sesiuni').insertAdjacentHTML('beforeend', `<div class="form-check">
+      <input class="form-check-input" type="radio" name="ses" id="s-${s.id}" value="${s.nume}" ${s.libere ? (i === 0 ? 'checked' : '') : 'disabled'}>
+      <label class="form-check-label" for="s-${s.id}">${s.nume} – ${s.libere ? `<span class="text-success-emphasis">${s.libere} locuri libere</span>` : '<span class="text-body-secondary">complet, nu mai sunt locuri</span>'}</label></div>`));
+    document.querySelectorAll('[title]').forEach(el => new bootstrap.Tooltip(el));
+    const REGULI = {
+      nume: v => v.split(/\s+/).filter(Boolean).length < 2 ? 'Scrieți numele și prenumele, de exemplu Popescu Ana.' : '',
+      email: v => !v ? 'Introduceți adresa de e-mail.' : !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v) ? 'Adresa pare incompletă. Exemplu corect: ana.popescu@exemplu.ro' : '',
+      tel: v => v && !/^(07\d{8}|\+407\d{8})$/.test(v.replace(/[\s.-]/g, '')) ? 'Numărul trebuie să aibă 10 cifre și să înceapă cu 07, de exemplu 0722 123 456.' : '',
+      spec: v => !v ? 'Alegeți specializarea din listă.' : '',
+      an: v => !v ? 'Alegeți anul de studiu.' : '',
+      acord: (v, el) => !el.checked ? 'Bifați acordul pentru a vă putea înscrie.' : '',
+    };
+    const ETICHETE = { nume: 'Numele și prenumele', email: 'E-mail', tel: 'Telefon', spec: 'Specializarea', an: 'Anul de studiu', acord: 'Acordul' };
+    function verifica(id) {
+      const el = $(id), msg = REGULI[id](el.value.trim(), el);
+      el.classList.toggle('is-invalid', !!msg); el.setAttribute('aria-invalid', !!msg);
+      el.classList.toggle('is-valid', !msg && el.value.trim() !== '' && el.type !== 'checkbox');
+      $('e-' + id).textContent = msg;
+      return msg;
+    }
+    // Sugestie pentru greselile frecvente de tastare din domeniul adresei
+    function sugereaza() {
+      const [u, d] = $('email').value.trim().split('@'), corect = GRESELI[(d || '').toLowerCase()];
+      $('sugestie').innerHTML = corect ? `<div class="small mt-1">Ați vrut să scrieți <strong>${u}@${corect}</strong>? <button type="button" class="btn btn-sm btn-link p-0 align-baseline" id="corecteaza">Da, corectează</button></div>` : '';
+      if (corect) $('corecteaza').onclick = () => { $('email').value = `${u}@${corect}`; sugereaza(); verifica('email'); salveaza(); $('email').focus(); };
+    }
+    function salveaza() {
+      scrie('ciorna', Object.fromEntries(CAMPURI.map(id => [id, $(id).value])));
+      $('ciorna').textContent = 'Ciornă salvată la ' + new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+    }
+    function contor() { $('contor').textContent = `${$('obs').value.length} / 300 caractere`; }
+    Object.keys(REGULI).forEach(id => {
+      $(id).addEventListener('blur', () => { if ($(id).value || $(id).classList.contains('is-invalid')) verifica(id); if (id === 'email') sugereaza(); });
+      $(id).addEventListener('change', () => verifica(id));
+    });
+    CAMPURI.forEach(id => $(id).addEventListener('input', () => { salveaza(); if (id === 'obs') contor(); if ($(id).classList.contains('is-invalid')) verifica(id); }));
+    // Restauram ciorna, daca exista
+    const c = citeste('ciorna');
+    if (c && CAMPURI.some(id => c[id])) {
+      CAMPURI.forEach(id => $(id).value = c[id] || ''); contor();
+      $('info').innerHTML = 'Am restaurat datele completate anterior în acest browser.'; $('info').classList.remove('d-none');
+    }
+    $('f').addEventListener('submit', e => {
+      e.preventDefault();
+      const erori = Object.keys(REGULI).map(id => [id, verifica(id)]).filter(x => x[1]);
+      if (erori.length) {
+        $('sumar').innerHTML = `<h2 class="h6">Formularul are ${erori.length === 1 ? 'o problemă' : erori.length + ' probleme'}:</h2><ul class="mb-0">` +
+          erori.map(([id, m]) => `<li><a href="#${id}">${ETICHETE[id]}</a>: ${m}</li>`).join('') + '</ul>';
+        $('sumar').classList.remove('d-none'); $('sumar').focus(); return;
+      }
+      $('sumar').classList.add('d-none');
+      $('trimite').disabled = true; $('trimite').innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Se trimite…';
+      setTimeout(() => {
+        const ses = document.querySelector('input[name=ses]:checked').value;
+        scrie('ciorna', null); document.querySelector('.card').classList.add('d-none');
+        $('succes').innerHTML = `<div class="alert alert-success p-4"><h2 class="h4">Înscrierea a fost înregistrată</h2>
+          <p>Vă așteptăm sâmbătă, 14 noiembrie, în sesiunea <strong>${ses}</strong>.</p>
+          <p class="mb-0">Confirmarea a fost trimisă la <strong>${$('email').value.trim()}</strong>. Dacă nu o găsiți, verificați și dosarul Spam.</p></div>
+          <button class="btn btn-outline-primary" onclick="location.reload()">Înscrie altă persoană</button>`;
+        $('succes').classList.remove('d-none'); $('succes').focus();
+      }, 1200);
+    });
+    $('sumar').addEventListener('click', e => { if (e.target.hash) { e.preventDefault(); $(e.target.hash.slice(1)).focus(); } });
+    $('goleste').onclick = () => modal.show();
+    $('daGoleste').onclick = () => {
+      $('f').reset(); scrie('ciorna', null); contor(); modal.hide();
+      document.querySelectorAll('.is-invalid, .is-valid').forEach(el => el.classList.remove('is-invalid', 'is-valid'));
+      ['sumar', 'info'].forEach(id => $(id).classList.add('d-none')); $('sugestie').innerHTML = ''; $('ciorna').textContent = 'Formularul a fost golit.';
+    };
+  </script>
+  <script src="../../assets/nivel.js" data-nivel="4"></script>
+</body>
+</html>

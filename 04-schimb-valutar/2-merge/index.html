@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Schimb valutar</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f0f0f0; font-size: 14px; }
+  .cadru { width: 960px; margin: 16px auto; background: #fff; padding: 16px; }
+  table.curs { border-collapse: collapse; margin-bottom: 20px; }
+  table.curs td, table.curs th { border: 1px solid #ccc; padding: 6px 14px; }
+  .cump { background: #00c853; color: #fff; font-weight: bold; }
+  .vanz { background: #ff1744; color: #fff; font-weight: bold; }
+  #chitanta { margin-top: 300px; border: 1px dashed #999; padding: 10px; white-space: pre; font-family: monospace; }
+</style>
+</head>
+<body>
+<div class="cadru">
+  <h2>Casa de schimb valutar</h2>
+  <table class="curs">
+    <tr><th>Moneda</th><th class="cump">Cumpărare</th><th class="vanz">Vânzare</th></tr>
+    <tr><td>EUR</td><td>4.9500</td><td>5.0800</td></tr>
+    <tr><td>USD</td><td>4.3500</td><td>4.4900</td></tr>
+    <tr><td>GBP</td><td>5.7800</td><td>5.9400</td></tr>
+    <tr><td>CHF</td><td>5.2800</td><td>5.4300</td></tr>
+  </table>
+  <p>
+    Operatiune:
+    <input type="radio" name="op" value="0" checked> Cumpărare
+    <input type="radio" name="op" value="1"> Vânzare
+  </p>
+  <p>
+    Moneda: <select id="mon"><option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option></select>
+    Suma: <input id="suma" size="10">
+    <button onclick="calculeaza()">Calculează</button>
+  </p>
+  <p>Total: <b id="total">-</b></p>
+  <button onclick="emite()">Emite chitanta</button>
+  <div id="chitanta"></div>
+</div>
+
+<script>
+  var curs = { EUR: [4.95, 5.08], USD: [4.35, 4.49], GBP: [5.78, 5.94], CHF: [5.28, 5.43] };
+  var nr = 1, total = null;
+
+  function calculeaza() {
+    var s = parseFloat(document.getElementById('suma').value);
+    if (isNaN(s) || s <= 0) { alert('Invalid amount'); return; }
+    var op = document.querySelector('input[name=op]:checked').value;
+    total = s * curs[document.getElementById('mon').value][op];
+    document.getElementById('total').textContent = total.toFixed(2).replace('.', ',') + ' RON';
+  }
+
+  function emite() {
+    if (total === null) { alert('Error: no total'); return; }
+    var op = document.querySelector('input[name=op]:checked').value === '0' ? 'CUMPARARE' : 'VANZARE';
+    document.getElementById('chitanta').textContent =
+      'CHITANTA NR. ' + nr++ + '\n' + new Date().toLocaleString() + '\n' + op + ' ' +
+      document.getElementById('suma').value + ' ' + document.getElementById('mon').value +
+      '\nTOTAL: ' + total.toFixed(2) + ' RON';
+  }
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Înscriere atelier</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f2f4f8; padding-bottom: 90px; }
+    .antet { background: linear-gradient(135deg, #1f3c88, #2a6f97); color: #fff; }
+    .obl { color: #b42318; }
+    .ajutor { width: 1.4rem; height: 1.4rem; padding: 0; line-height: 1; border-radius: 50%; font-size: .8rem; }
+  </style>
+</head>
+<body>
+  <header class="antet py-4 mb-4"><div class="container">
+    <p class="mb-1 text-uppercase small opacity-75">Înscriere</p>
+    <h1 class="h3 mb-1">Atelier practic: prototiparea interfețelor</h1>
+    <p class="mb-0 opacity-75">Sâmbătă, 14 noiembrie 2026 · laboratorul de informatică · participare gratuită</p></div></header>
+  <main class="container">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="card border-0 shadow-sm"><div class="card-body p-4">
+          <div id="succes" class="d-none"></div>
+          <form id="f" novalidate>
+            <p class="small text-body-secondary">Câmpurile marcate cu <span class="obl">*</span> sunt obligatorii.</p>
+            <div class="row g-3">
+              <div class="col-12"><label for="nume" class="form-label">Numele și prenumele <span class="obl">*</span></label>
+                <input id="nume" class="form-control" placeholder="de exemplu Popescu Ana"><div class="invalid-feedback"></div></div>
+              <div class="col-md-6"><label for="email" class="form-label">Adresa de e-mail <span class="obl">*</span></label>
+                <input id="email" type="email" class="form-control"><div class="invalid-feedback"></div>
+                <div class="form-text">Aici primiți confirmarea înscrierii.</div></div>
+              <div class="col-md-6"><label for="tel" class="form-label">Telefon (opțional)
+                <button type="button" class="btn btn-outline-secondary ajutor ms-1" data-bs-toggle="tooltip" title="Îl folosim doar dacă atelierul se amână în ultima zi.">?</button></label>
+                <input id="tel" type="tel" class="form-control" placeholder="07xx xxx xxx"><div class="invalid-feedback"></div></div>
+              <div class="col-md-8"><label for="spec" class="form-label">Specializarea <span class="obl">*</span></label>
+                <select id="spec" class="form-select"><option value="">Alegeți…</option><option>Informatică</option><option>Tehnologia informației</option><option>Altă specializare</option></select>
+                <div class="invalid-feedback"></div></div>
+              <div class="col-md-4"><label for="an" class="form-label">Anul de studiu <span class="obl">*</span></label>
+                <select id="an" class="form-select"><option value="">Alegeți…</option><option>I</option><option>II</option><option>III</option><option>IV</option></select>
+                <div class="invalid-feedback"></div></div>
+              <div class="col-12"><span class="form-label d-block">Sesiunea <span class="obl">*</span></span>
+                <div id="sesiuni"></div><div id="eSes" class="invalid-feedback"></div></div>
+              <div class="col-12"><label for="obs" class="form-label">Observații (opțional)</label>
+                <textarea id="obs" class="form-control" rows="3" placeholder="de exemplu: am nevoie de un loc lângă priză"></textarea></div>
+              <div class="col-12"><div class="form-check"><input id="acord" type="checkbox" class="form-check-input">
+                <label for="acord" class="form-check-label">Sunt de acord ca datele să fie folosite doar pentru organizarea atelierului. <span class="obl">*</span></label>
+                <div class="invalid-feedback"></div></div></div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-4">
+              <button id="trimite" class="btn btn-primary btn-lg px-4">Trimite înscrierea</button>
+              <span id="stare" class="small text-body-secondary"></span>
+            </div>
+          </form>
+        </div></div>
+      </div>
+      <aside class="col-lg-4">
+        <div class="card border-0 shadow-sm"><div class="card-body">
+          <h2 class="h6 text-uppercase text-body-secondary">Despre atelier</h2>
+          <p class="mb-2">În trei ore construiți, pe hârtie și apoi în browser, prototipul unei interfețe și îl testați cu un coleg.</p>
+          <ul class="small mb-0 ps-3"><li>Nu este nevoie de experiență anterioară.</li><li>Aduceți laptopul, dacă aveți.</li><li>Primiți o adeverință de participare.</li></ul>
+        </div></div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Sesiunile si locurile libere (date demonstrative)
+    const SESIUNI = [{ id: 'dim', nume: 'Dimineața, 9:00–12:00', libere: 4 }, { id: 'dupa', nume: 'După-amiaza, 14:00–17:00', libere: 0 }];
+    const $ = id => document.getElementById(id);
+    SESIUNI.forEach(s => $('sesiuni').insertAdjacentHTML('beforeend', `<div class="form-check">
+      <input class="form-check-input" type="radio" name="ses" id="s-${s.id}" value="${s.nume}" ${s.libere ? '' : 'disabled'}>
+      <label class="form-check-label" for="s-${s.id}">${s.nume}
+        ${s.libere ? `<span class="badge bg-success-subtle text-success-emphasis">${s.libere} locuri libere</span>`
+                   : '<span class="badge text-bg-secondary" data-bs-toggle="tooltip" title="Toate locurile sunt ocupate. Alegeți sesiunea de dimineață.">Complet</span>'}</label></div>`));
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+
+    // Regulile de validare: fiecare intoarce un mesaj de eroare sau ''
+    const REGULI = {
+      nume: v => v.split(/\s+/).filter(Boolean).length < 2 ? 'Scrieți numele și prenumele, de exemplu Popescu Ana.' : '',
+      email: v => !v ? 'Introduceți adresa de e-mail.' : !/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(v) ? 'Adresa pare incompletă. Exemplu corect: ana.popescu@exemplu.ro' : '',
+      tel: v => v && !/^(07\d{8}|\+407\d{8})$/.test(v.replace(/[\s.-]/g, '')) ? 'Numărul trebuie să aibă 10 cifre și să înceapă cu 07, de exemplu 0722 123 456.' : '',
+      spec: v => !v ? 'Alegeți specializarea din listă.' : '',
+      an: v => !v ? 'Alegeți anul de studiu.' : '',
+      acord: (v, el) => !el.checked ? 'Avem nevoie de acordul dvs. pentru a vă înscrie.' : '',
+    };
+    function verifica(id) {
+      const el = $(id), msg = REGULI[id](el.value.trim(), el);
+      el.classList.toggle('is-invalid', !!msg);
+      el.classList.toggle('is-valid', !msg && el.value.trim() !== '' && el.type !== 'checkbox');
+      el.parentElement.querySelector('.invalid-feedback').textContent = msg;
+      return !msg;
+    }
+    // Validam la parasirea campului, nu in timp ce utilizatorul scrie
+    Object.keys(REGULI).forEach(id => {
+      $(id).addEventListener('blur', () => { if ($(id).value || $(id).classList.contains('is-invalid')) verifica(id); });
+      $(id).addEventListener('change', () => verifica(id));
+    });
+
+    $('f').addEventListener('submit', e => {
+      e.preventDefault();
+      let ok = Object.keys(REGULI).map(verifica).every(Boolean);
+      const ses = document.querySelector('input[name=ses]:checked');
+      $('eSes').textContent = ses ? '' : 'Alegeți o sesiune.'; $('eSes').classList.toggle('d-block', !ses);
+      ok = ok && !!ses;
+      if (!ok) { $('stare').textContent = 'Verificați câmpurile marcate cu roșu.'; $('stare').className = 'small text-danger'; return; }
+      $('trimite').disabled = true;
+      $('trimite').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Se trimite…';
+      $('stare').textContent = '';
+      setTimeout(() => {
+        $('f').classList.add('d-none'); $('succes').classList.remove('d-none');
+        $('succes').innerHTML = `<div class="alert alert-success"><h2 class="h5">Înscrierea a fost înregistrată</h2>
+          <p class="mb-0">Vă așteptăm în sesiunea <strong>${ses.value}</strong>. Am trimis confirmarea la <strong>${$('email').value.trim()}</strong>.</p></div>
+          <button class="btn btn-outline-primary" id="alta">Înscrie altă persoană</button>`;
+        $('alta').onclick = () => location.reload();
+      }, 1200);
+    });
+  </script>
+  <script src="../../assets/nivel.js" data-nivel="3"></script>
+</body>
+</html>

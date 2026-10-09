@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Automat de bilete</title>
+<style>
+  body { font-family: Tahoma, sans-serif; background: #d7dde3; margin: 0; }
+  .ecran { width: 900px; height: 480px; margin: 20px auto; background: #0b3d91; color: #9fb4d8; position: relative; }
+  .nav { position: absolute; top: 6px; left: 8px; font-size: 11px; }
+  .nav a { color: #7f99c9; }
+  .camp { position: absolute; bottom: 60px; right: 40px; font-size: 13px; }
+  .camp select, .camp input { font-size: 11px; width: 70px; }
+  .note { position: absolute; bottom: 8px; left: 8px; font-size: 9px; color: #5f7db3; }
+  .jos { position: absolute; bottom: 20px; right: 40px; }
+  .jos button { font-size: 10px; padding: 1px 6px; background: #c9c9c9; border: 1px solid #999; }
+  h3 { margin: 0; padding: 40px; font-weight: normal; }
+</style>
+</head>
+<body>
+<div class="ecran" id="ecran">
+  <div class="nav"><a href="#" onclick="urmator(); return false;">Urmatorul &gt;</a></div>
+  <h3 id="titlu"></h3>
+  <div class="camp" id="camp"></div>
+  <div class="jos" id="jos"></div>
+  <div class="note">T1=1 calat. T2=2 calat. AB1=abon. 1 zi AB7=abon. 7 zile | N=normal R1=elev/stud. R2=pens.</div>
+</div>
+
+<script>
+  // tarife in bani
+  var tarife = { T1: 300, T2: 550, AB1: 1000, AB7: 4000 };
+  var pas = 0, tarif = 'T1', categ = 'N', nr = '1';
+
+  function arata() {
+    var t = document.getElementById('titlu'), c = document.getElementById('camp'), j = document.getElementById('jos');
+    j.innerHTML = '';
+    if (pas === 0) {
+      t.textContent = 'Selectati tarif';
+      c.innerHTML = '<select id="v"><option>T1</option><option>T2</option><option>AB1</option><option>AB7</option></select>';
+    } else if (pas === 1) {
+      t.textContent = 'Categorie';
+      c.innerHTML = '<select id="v"><option>N</option><option>R1</option><option>R2</option></select>';
+    } else if (pas === 2) {
+      t.textContent = 'Nr.';
+      c.innerHTML = '<input id="v" value="1">';
+    } else {
+      var total = tarife[tarif] * parseInt(nr) * (categ === 'N' ? 1 : 0.5);
+      t.textContent = 'Total: ' + total;
+      c.innerHTML = '';
+      j.innerHTML = '<button onclick="plata()">Plata</button> <button onclick="anulare()">Anulare</button>';
+    }
+  }
+
+  function urmator() {
+    var v = document.getElementById('v');
+    if (pas === 0) tarif = v.value;
+    if (pas === 1) categ = v.value;
+    if (pas === 2) nr = v.value;
+    if (pas < 3) pas++;
+    arata();
+  }
+
+  function anulare() { pas = 0; arata(); }
+
+  function plata() {
+    document.getElementById('titlu').textContent = 'Tranzactie in curs';
+    document.getElementById('jos').innerHTML = '';
+    setTimeout(function () {
+      document.getElementById('titlu').textContent = 'Ridicati biletul';
+      setTimeout(function () { pas = 0; arata(); }, 1500);
+    }, 2000);
+  }
+
+  arata();
+</script>
+<script src="../../assets/nivel.js" data-nivel="1"></script>
+</body>
+</html>

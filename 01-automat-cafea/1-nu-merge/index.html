@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Automat de cafea</title>
+<style>
+  body { background: #5c5c5c; font-family: Arial, sans-serif; }
+  .aparat { width: 380px; margin: 30px auto; background: #3b3b3b; padding: 14px; border-radius: 4px; }
+  .ecran { background: #23402a; color: #3f7a4a; font: 22px monospace; padding: 8px; height: 28px; letter-spacing: 3px; }
+  .lista { color: #7a7a7a; font-size: 10px; line-height: 1.3; margin: 8px 0; }
+  .taste button { width: 30px; height: 22px; font-size: 10px; background: #4a4a4a; color: #8a8a8a; border: 1px solid #444; margin: 1px; padding: 0; }
+  .monede { margin-top: 10px; text-align: right; }
+  .monede button { font-size: 9px; padding: 1px 3px; background: #4a4a4a; color: #8a8a8a; border: 1px solid #444; }
+  .tava { height: 40px; background: #222; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="aparat">
+  <div class="ecran" id="ecran">0.00</div>
+  <div class="lista">
+    A1 ESP 5 &nbsp; A2 LNG 5 &nbsp; A3 CAP 7<br>
+    B1 LAT 8 &nbsp; B2 CIO 7 &nbsp; B3 CEAI 4<br>
+    Z+/Z- zahar
+  </div>
+  <div class="taste">
+    <button onclick="tasta('A')">A</button><button onclick="tasta('B')">B</button>
+    <button onclick="tasta('1')">1</button><button onclick="tasta('2')">2</button>
+    <button onclick="tasta('3')">3</button><button onclick="tasta('4')">4</button>
+    <button onclick="zahar(1)">Z+</button><button onclick="zahar(-1)">Z-</button>
+    <button onclick="sterge()">C</button><button onclick="ok()">OK</button>
+  </div>
+  <div class="monede">
+    <button onclick="moneda(0.5)">0.5</button>
+    <button onclick="moneda(1)">1</button>
+    <button onclick="moneda(5)">5</button>
+    <button onclick="moneda(10)">10</button>
+  </div>
+  <div class="tava"></div>
+</div>
+
+<script>
+  // preturile sunt cunoscute doar de program
+  var preturi = { A1: 5, A2: 5, A3: 7, B1: 8, B2: 7, B3: 4 };
+  var cod = '', credit = 0, z = 3, ocupat = false;
+
+  function afiseaza(t) { document.getElementById('ecran').textContent = t; }
+
+  function tasta(t) {
+    if (ocupat) return;
+    if (cod.length >= 2) cod = '';
+    cod += t;
+    afiseaza(cod);
+  }
+
+  function zahar(d) {
+    z = Math.min(5, Math.max(0, z + d));
+    afiseaza(cod + ' S' + z);
+  }
+
+  function moneda(v) {
+    if (ocupat) return;
+    credit += v;
+    afiseaza('CR ' + credit.toFixed(2));
+  }
+
+  // C sterge tot, inclusiv creditul introdus
+  function sterge() {
+    cod = ''; credit = 0;
+    afiseaza('0.00');
+  }
+
+  function ok() {
+    if (ocupat || cod === '') return;
+    if (!(cod in preturi)) { afiseaza('E1'); cod = ''; return; }
+    if (credit < preturi[cod]) {
+      afiseaza('E3');
+      setTimeout(function () { afiseaza('CR ' + credit.toFixed(2)); }, 800);
+      return;
+    }
+    credit -= preturi[cod];
+    ocupat = true;
+    afiseaza('----');
+    setTimeout(function () {
+      afiseaza('OK');
+      setTimeout(function () { ocupat = false; cod = ''; afiseaza(credit.toFixed(2)); }, 700);
+    }, 3000);
+  }
+</script>
+<script src="../../assets/nivel.js" data-nivel="1"></script>
+</body>
+</html>

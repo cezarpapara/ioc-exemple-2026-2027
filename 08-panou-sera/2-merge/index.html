@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Panou seră</title>
+<style>
+  body { font-family: Verdana, sans-serif; font-size: 13px; background: #263238; color: #cfd8dc; margin: 0; }
+  .pagina { width: 1100px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 18px; color: #80cbc4; }
+  .valori { display: flex; gap: 12px; }
+  .valoare { background: #37474f; padding: 10px; width: 200px; }
+  .alarma-text { color: #ff5252; font-weight: bold; font-size: 15px; height: 20px; }
+  button { margin: 2px; padding: 6px 10px; border: 0; color: #fff; }
+  .on { background: #43a047; } .off { background: #e53935; } .irig { background: #1e88e5; }
+  canvas { background: #37474f; margin-top: 12px; }
+  textarea { width: 100%; height: 110px; background: #102027; color: #ff8a80; font-family: monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <h1>Panou de control – Sera 2</h1>
+  <div class="alarma-text" id="alarma"></div>
+  <div class="valori">
+    <div class="valoare">Temperatură: <span id="temp"></span> °C</div>
+    <div class="valoare">Umiditate aer: <span id="umid"></span> %</div>
+    <div class="valoare">Umiditate sol: <span id="sol"></span> %</div>
+  </div>
+  <p>
+    <button class="on" data-cmd="vent" data-val="1">Ventilație ON</button><button class="off" data-cmd="vent" data-val="0">Ventilație OFF</button>
+    <button class="on" data-cmd="inc" data-val="1">Încălzire ON</button><button class="off" data-cmd="inc" data-val="0">Încălzire OFF</button>
+    <button class="irig" id="irigare">Irigare</button>
+  </p>
+  <canvas id="grafic" width="1060" height="180"></canvas>
+  <p>Log:</p>
+  <textarea id="log" readonly></textarea>
+</div>
+
+<script>
+  const v = { temp: 24.5, umid: 70, sol: 42 };
+  const cmd = { vent: false, inc: false };
+  let irigare = 0;
+  const istoric = [];
+  const $ = id => document.getElementById(id);
+
+  // Comenzile functioneaza, dar starea curenta nu este afisata
+  document.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => { cmd[b.dataset.cmd] = b.dataset.val === '1'; });
+  $('irigare').onclick = () => { irigare = 30; };
+
+  // Graficul nu are axe, unitati sau legenda, iar scara se schimba mereu
+  function deseneaza() {
+    const c = $('grafic').getContext('2d');
+    const min = Math.min(...istoric), max = Math.max(...istoric);
+    c.clearRect(0, 0, 1060, 180);
+    c.strokeStyle = '#ffeb3b';
+    c.beginPath();
+    istoric.forEach((t, i) => c.lineTo(i * (1060 / 59), 170 - (t - min) / (max - min || 1) * 160));
+    c.stroke();
+  }
+
+  setInterval(() => {
+    v.temp += (cmd.vent ? -0.35 : 0.25) + (cmd.inc ? 0.3 : 0) + (Math.random() - 0.5) * 0.2;
+    v.umid += (cmd.vent ? -0.4 : 0.15) + (Math.random() - 0.5) * 0.5;
+    v.sol += (irigare > 0 ? 1.2 : -0.25);
+    if (irigare > 0) irigare--;
+    $('temp').textContent = v.temp.toFixed(1);
+    $('umid').textContent = v.umid.toFixed(1);
+    $('sol').textContent = v.sol.toFixed(1);
+    istoric.push(v.temp);
+    if (istoric.length > 60) istoric.shift();
+    deseneaza();
+    // La fiecare masuratoare in afara limitelor se adauga o linie noua in jurnal
+    const erori = [];
+    if (v.temp > 30) erori.push('ERR_T_HIGH');
+    if (v.umid > 90) erori.push('ERR_RH_HIGH');
+    if (v.sol < 25) erori.push('ERR_SOIL_LOW');
+    $('alarma').textContent = erori.length ? 'ALARM!' : '';
+    erori.forEach(e => { $('log').value += e + ' ' + Date.now() + '\n'; });
+  }, 2000);
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>

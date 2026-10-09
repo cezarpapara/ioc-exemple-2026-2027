@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Automat de bilete</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #eef1f4; }
+  .automat { width: 760px; margin: 20px auto; background: #fff; border: 1px solid #b8c2cc; padding: 16px 24px; }
+  h1 { font-size: 20px; color: #0b3d91; }
+  fieldset { border: 1px solid #ccd; margin-bottom: 12px; }
+  .pret { font-size: 18px; margin: 12px 0; }
+  .butoane button { background: #ddd; border: 1px solid #aaa; padding: 6px 14px; margin-right: 2px; }
+  #calc { background: #0b3d91; color: #fff; border: 0; padding: 6px 10px; }
+</style>
+</head>
+<body>
+<div class="automat">
+  <h1>Bilete autobuz</h1>
+  <fieldset>
+    <legend>Tip bilet</legend>
+    <input type="radio" name="tip" value="0" checked> O calatorie (3 lei)<br>
+    <input type="radio" name="tip" value="1"> Doua calatorii (5.5 lei)<br>
+    <input type="radio" name="tip" value="2"> Abonament 1 zi (10 lei)<br>
+    <input type="radio" name="tip" value="3"> Abonament 7 zile (40 lei)
+  </fieldset>
+  <fieldset>
+    <legend>Categorie</legend>
+    <select id="categ">
+      <option value="1">Normal</option>
+      <option value="0.5">Elev/Student</option>
+      <option value="0.5">Pensionar</option>
+    </select>
+  </fieldset>
+  <fieldset>
+    <legend>Numar bilete</legend>
+    <input type="number" id="nr" value="1">
+  </fieldset>
+  <button id="calc" onclick="calculeaza()">Calculeaza pretul</button>
+  <div class="pret">Total: <span id="total">-</span></div>
+  <div class="butoane">
+    <button onclick="cumpara()">Cumpără</button><button onclick="anuleaza()">Anulează</button>
+  </div>
+</div>
+
+<script>
+  var preturi = [3, 5.5, 10, 40];
+  var total = null;
+
+  function calculeaza() {
+    var tip = document.querySelector('input[name=tip]:checked').value;
+    var nr = parseInt(document.getElementById('nr').value);
+    if (isNaN(nr) || nr < 1) { alert('Invalid quantity'); return; }
+    total = preturi[tip] * nr * parseFloat(document.getElementById('categ').value);
+    document.getElementById('total').textContent = total + ' RON';
+  }
+
+  function cumpara() {
+    // pretul trebuie calculat inainte
+    if (total === null) { alert('Error 12: calculati pretul'); return; }
+    var cod = Math.random().toString(36).substring(2, 8).toUpperCase();
+    alert('Tranzactie reusita. Cod bilet: ' + cod);
+    anuleaza();
+  }
+
+  function anuleaza() {
+    total = null;
+    document.getElementById('nr').value = 1;
+    document.getElementById('total').textContent = '-';
+  }
+</script>
+<script src="../../assets/nivel.js" data-nivel="2"></script>
+</body>
+</html>
